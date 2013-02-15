@@ -8,6 +8,7 @@
 #include "TextTrackCue.h"
 #include "TextTrackCueList.h"
 #include "nsAutoRefTraits.h"
+#include "webvtt/string.h"
 
 // We might want to look into using #if defined(MOZ_WEBVTT)
 class nsAutoRefTraits<webvtt_parser> : public nsPointerRefTraits<webvtt_parser>
@@ -37,36 +38,30 @@ WebVTTLoadListener::~WebVTTLoadListener()
   }
 }
 
-nsresult WebVTTLoadListener::LoadResource()
+nsresult
+WebVTTLoadListener::LoadResource()
 {
   webvtt_parser *parser;
-  
-  webvtt_create_parser(&__parsedCue, &__reportError, this, parser);
-  if (!parser) {
+  webvtt_status status;
+
+  status = webvtt_create_parser(&OnParsedCueWebVTTCallBack, 
+                                &OnReportErrorWebVTTCallBack, 
+                                this, parser);
+
+  if (status != WEBVTT_SUCCESS) {
+    NS_ENSURE_TRUE(status == WEBVTT_OUT_OF_MEMORY,
+                   NS_ERROR_OUT_OF_MEMORY);
+    NS_ENSURE_TRUE(status == WEBVTT_INVALID_ARGUMENT,
+                   NS_ERROR_INVALID_ARG);
     return NS_ERROR_FAILURE;
   }
+
+  NS_ENSURE_TRUE(parser != nullptr, NS_ERROR_FAILURE);
 
   mParser.own(parser);
-  if (!mParser) {
-    return NS_ERROR_FAILURE;
-  }
+  NS_ENSURE_TRUE(mParser != nullptr, NS_ERROR_FAILURE);
 
   return NS_OK;
-}
-
-NS_METHOD WevVTTLoadListener::WebVTTParseChunk(nsIInputStream *aInStream, void *aClosure,
-                                               const char *aFromSegment, uint32_t aToOffset,
-                                               uint32_t aCount, uint32_t *aWriteCount)
-{
-  // How to determine if this is the final chunk?
-  if (!webvtt_parse_chunk(mParser, aFromSegment, aCount, 0))
-  {
-    // TODO: Handle error
-  }
-
-  *aWriteCount = aCount;
-
-  return NS_OK && (*aWriteCount > 0)
 }
 
 NS_IMETHODIMP
@@ -74,8 +69,10 @@ WebVTTLoadListener::Observe(nsISupports* aSubject,
                             const char *aTopic,
                             const PRUnichar* aData)
 {
-  nsContentUtils::UnregisterShutdownObserver(this);
-
+  if (strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
+    nsContentUtils::UnregisterShutdownObserver(this);
+  }
+ 
   // Clear mElement to break cycle so we don't leak on shutdown
   mElement = nullptr;
   return NS_OK;
@@ -104,25 +101,14 @@ WebVTTLoadListener::OnDataAvailable(nsIRequest* aRequest,
                                     uint64_t aOffset,
                                     uint32_t aCount)
 {
-  nsresult rv;
-  uint64_t available;
-  bool blocking;
-
-  rv = aStream->IsNonBlocking(&blocking);
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  rv = aStream->Available(&available);
-  NS_ENSURE_SUCCESS(rv, rv);
-
   uint32_t count = aCount;
   while (count > 0) {
     uint32_t read;
-    nsresult rv = aStream->ReadSegments(WebVTTParseChunk, this, count, &read)
+    nsresult rv = aStream->ReadSegments(ParseChunk, this, count, &read);
 
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
+    NS_ENSURE_SUCCESS(rv, rv);
     NS_ASSERTION(read > 0, "Read 0 bytes while data was available?" );
+
     count -= read;
   }
 
@@ -145,17 +131,30 @@ WebVTTLoadListener::GetInterface(const nsIID &aIID,
   return QueryInterface(aIID, aResult);
 }
 
-void 
-WebVTTLoadListener::parsedCue(webvtt_cue *aCue) 
+NS_METHOD 
+WebVTTLoadListener::ParseChunk(nsIInputStream *aInStream, void *aClosure,
+                               const char *aFromSegment, uint32_t aToOffset,
+                               uint32_t aCount, uint32_t *aWriteCount)
 {
+  // How to determine if this is the final chunk?
+  if (!webvtt_parse_chunk(mParser, aFromSegment, aCount, 0)) {
+    // TODO: Handle error
+  }
+  *aWriteCount = aCount;
+
+  return NS_OK;
+}
+
+void 
+WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue) 
+{
+  TextTrackCue textTrackCue = ConvertCueToTextTrackCue(aCue);
+  mElement.Track.AddCue(textTrackCue);
+
   ErrorResult rv;
-
-  TextTrackCue textTrackCue = CCueToTextTrackCue(*aCue);
-  mElement.Track.addCue(textTrackCue);
-
-  already_AddRefed<DocumentFragment> frag = CNodeListToDomFragment(*aCue, rv);
+  already_AddRefed<DocumentFragment> frag = ConvertNodeListToDomFragment(aCue, rv);
   if (!frag || rv.Failed()) {
-    // Do something with rv.ErrorCode here.
+    // TODO: Do something with rv.ErrorCode here.
   }
 
   nsHTMLMediaElement* parent =
@@ -164,107 +163,157 @@ WebVTTLoadListener::parsedCue(webvtt_cue *aCue)
   nsIFrame* frame = mElement->mMediaParent->GetPrimaryFrame();
   if (frame && frame->GetType() == nsGkAtoms::HTMLVideoFrame) {
 
-    nsIContent *overlay = static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
+    nsIContent *overlay = 
+      static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
     nsCOMPtr<nsIDOMNode> div = do_QueryInterface(overlay);
 
     if (div) {
+      // TODO: Might need to remove previous children first
       div->appendChild(frag);
     }
   }
 }
 
 void 
-WebVTTLoadListener::reportError(uint32_t aLine, uint32_t aCol, webvtt_error aError)
+WebVTTLoadListener::OnReportError(uint32_t aLine, uint32_t aCol, 
+                                  webvtt_error aError)
 {
-  // TODO: Handle error here
+  // TODO: Handle error here, been suggessted that we just use PR_LOGGING
 }
 
 TextTrackCue 
-WebVTTLoadListener::CCueToTextTrackCue(const webvtt_cue aCue)
+WebVTTLoadListener::ConvertCueToTextTrackCue(const webvtt_cue *aCue)
 {
-  // TODO: Have to figure out what the constructor is here. aNodeInfo??
-  TextTrackCue domCue(/* nsISupports *aGlobal here */);
-
-  domeCue.Init(aCue.from, aCue.until, NS_ConvertUTF8toUTF16(aCue->id.d->text), /* ErrorResult &rv */);
+  // TODO: What to pass in for aGlobal?
+  TextTrackCue textTrackCue(/* nsISupports *aGlobal here */,
+                            aCue->from, aCue->until,
+                            webvtt_string_text(NS_ConvertUTF8toUTF16(aCue->id)));
   
-  domCue.SetSnapToLines(aCue.snap_to_lines);
-  domCue.SetSize(aCue.settings.size);
-  domCue.SetPosition(aCue.settings.position);
+  textTrackCue.SetSnapToLines(aCue->snap_to_lines);
+  textTrackCue.SetSize(aCue->settings.size);
+  textTrackCue.SetPosition(aCue->settings.position);
   
-  domCue.SetVertical();
-  domCue.SetAlign();
+  //TODO: need to convert webvtt enums to strings
+  textTrackCue.SetVertical();
+  textTrackCue.SetAlign();
 
-  // Not specified in webvtt so we may not need this.
-  domCue.SetPauseOnExit();
+  // TODO: Id is the text in the parser so do we need this?
+  textTrackCue.SetId();
 
-  return domCue;
+  // TODO: Not specified in webvtt so we may not need this.
+  textTrackCue.SetPauseOnExit();
+
+  return textTrackCue;
 }
 
 already_AddRefed<DocumentFragment>
-WebVTTLoadListener::CNodeListToDocFragment(const webvtt_node aNode)
+WebVTTLoadListener::ConvertNodeListToDocFragment(const webvtt_node *aNode, 
+                                                 ErrorResult &rv)
 {
   nsCOMPtr<nsIContent> content = do_QueryInterface(mElement);
   if (!content) {
     return nullptr;
   }
 
-  ErrorResult rv;
+  // TODO: Do we need to do something with this error result?
   already_AddRefed<DocumentFragment> frag = content.CreateDocumentFragment(rv);
   if (!frag) {
     return nullptr;
   }
 
-  HtmlElement htmlElement;
-  for (int i = 0; i < aNode.data->internal_data.length; i++)
+  HTMLElement htmlElement;
+  for (int i = 0; i < aNode->data->internal_data.length; i++)
   {
-    htmlElement = CNodeToHtmlElement(aNode.data->internal_data.children[i]);
+    htmlElement = CNodeToHtmlElement(aNode->data->internal_data.children[i]);
     frag.appendChild(htmlElement);
   }
 
   return frag;
 }
 
-HtmlElement
-WebVTTLoadListener::CNodeToHtmlElement(const webvtt_node aWebVttNode)
+HTMLElement
+WebVTTLoadListener::ConvertNodeToHtmlElement(const webvtt_node *aWebVttNode)
 {
+  // TODO: Change to iterative solution instead of recursive
+
   nsAString htmlNamespace = NS_LITERAL_STRING("html");
 
-  if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVttNode.kind))
+  nsAString qualifiedName;
+  // TODO: Is this the correct way to be passing in a node info? If we need an 
+  //       objects node info, than whose?
+  already_AddRefed<nsINodeInfo> nodeInfo;
+  HTMLElement htmlElement(nodeInfo);
+  
+  if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVttNode->kind))
   {
-    switch (aWebVttNode.kind) {
+    switch (aWebVttNode->kind) {
+      case WEBVTT_CLASS:
+        qualifiedName = NS_LITERAL_STRING("span");
+        break;
       case WEBVTT_ITALIC:
-        htmlElement.setAttributeNS(htmlNamespace, NS_LITERAL_STRING("u"), nullptr);
+        qualifiedName = NS_LITERAL_STRING("i");
+        break;
+      case WEBVTT_BOLD:
+        qualifiedName = NS_LITERAL_STRING("b");
+        break;
+      case WEBVTT_UNDERLINE:
+        qualifiedName = NS_LITERAL_STRING("u");
+        break;
+      case WEBVTT_RUBY:
+        qualifiedName = NS_LITERAL_STRING("ruby");
+        break;
+      case WEBVTT_RUBY_TEXT:
+        qualifiedName = NS_LITERAL_STRING("rt");
+        break;
+      case WEBVTT_VOICE:
+        qualifiedName = NS_LITERAL_STRING("span");
+        htmlElement.SetTitle(
+          NS_ConvertUTF8toUTF16(
+            webvtt_string_text(aWebVttNode->data.internal_data->annotation));
         break;
     }
 
-    for (int i = 0; i < aWebVttNode.data->internal_data.length; i++)
+    // TODO:: Need to concatenate all applicable classes separated by spaces and
+    //        set them to the htmlElements class attribute
+
+    htmlElement.SetAttributeNS(htmlNamespace, qualifiedName, 
+                               NS_LITERAL_STRING(""));
+
+    for (int i = 0; i < aWebVttNode->data.internal_data->length; i++)
     {
-      htmlElement.appendChild(CNodeToHtmlElement(aWebVttNode.data->internal_data.children[i]);
+      htmlElement.appendChild(
+        CNodeToHtmlElement(aWebVttNode->data.internal_data->children[i]);
     }
   }
-  else if (WEBVTT_IS_VALID_LEAF_NODE(aWebVttNode.kind))
+  else if (WEBVTT_IS_VALID_LEAF_NODE(aWebVttNode->kind))
   {
-    // TODO: Convert to HtmlElement
+    switch (aWebVttNode->kind) {
+      case WEBVTT_TEXT:
+        // TODO: Need to create a Text Node
+        break;
+      case WEBVTT_TIME_STAMP:
+        // TODO: Need to create a "ProcessingInstruction?"
+        break;
+    }
   }
 
   return htmlElement;
 }
 
 static void WEBVTT_CALLBACK
-WebVTTLoadListener::__parsedCue(void *aUserData, webvtt_cue *aCue)
+OnParsedCueWebVTTCallBack(void *aUserData, webvtt_cue *aCue)
 {
-  WebVTTLoadListener *self = reinterpret_cast<WebVTTLoadListener *>( userdata );
-  self->parsedCue(aCue);
+  WebVTTLoadListener *self = reinterpret_cast<WebVTTLoadListener *>(userdata);
+  self->OnParsedCue(aCue);
 }
 
 static int WEBVTT_CALLBACK 
-WebVTTLoadListener::__reportError(void *aUserData, uint32_t aLine, 
-                                  uint32_t aCol, webvtt_error aError)
+OnReportErrorWebVTTCallBack(void *aUserData, uint32_t aLine, 
+                            uint32_t aCol, webvtt_error aError)
 {
-  WebVTTLoadListener *self = reinterpret_cast<WebVTTLoadListener *>( userdata );
-  self->reportError(aLine, aCol, aError);
+  WebVTTLoadListener *self = reinterpret_cast<WebVTTLoadListener *>(userdata);
+  self->OnReportError(aLine, aCol, aError);
 }
 
 } // namespace dom
 } // namespace mozilla
-

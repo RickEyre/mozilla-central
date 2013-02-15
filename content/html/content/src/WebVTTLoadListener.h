@@ -3,17 +3,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_dom_WEBVTTLoadListner_h
-#define mozilla_dom_WEBVTTLoadListner_h
+#ifndef mozilla_dom_WebVTTLoadListener_h
+#define mozilla_dom_WebVTTLoadListener_h
 
 #include "HTMLTrackElement.h"
 #include "webvtt/parser.h"
+#include "webvtt/util.h"
 #include "nsAutoRef.h"
 
 namespace mozilla {
 namespace dom {
 
-/** Channel Listener helper class */
 class WEBVTTLoadListener MOZ_FINAL : public nsIStreamListener,
                                      public nsIChannelEventSink,
                                      public nsIInterfaceRequestor,
@@ -30,9 +30,6 @@ public:
   WebVTTLoadListener(HTMLTrackElement *aElement);
   ~WebVTTLoadListener();
   nsresult LoadResource();
-  NS_METHOD WebVTTParseChunk(nsIInputStream *aInStream, void *aClosure,
-                           const char *aFromSegment, uint32_t aToOffset,
-                           uint32_t aCount, uint32_t *aWriteCount);
   NS_IMETHODIMP Observe(nsISupports* aSubject, const char *aTopic,
                         const PRUnichar* aData);
   NS_IMETHODIMP OnStartRequest(nsIRequest* aRequest, nsISupports* aContext);
@@ -47,25 +44,31 @@ public:
                                        nsIAsyncVerifyRedirectCallback* cb);
   NS_IMETHODIMP GetInterface(const nsIID &aIID, void **aResult);
 
-protected:
-  void parsedCue(webvtt_cue *cue);
-  void reportError(uint32_t line, uint32_t col, webvtt_error error);
-
-  TextTrackCue CCueToTextTrackCue(const webvtt_cue aCue);
-  already_AddRefed<DocumentFragment> CNodeListToDocFragment(const webvtt_node aNode);
-  HtmlElement CNodeToHtmlElement(const webvtt_node aNode);
-
 private:
-  static void WEBVTT_CALLBACK __parsedCue(void *aUserData, webvtt_cue *aCue);
-  static int WEBVTT_CALLBACK __reportError(void *aUserData, uint32_t aLine, 
-                                           uint32_t aCol, webvtt_error aError);
+  NS_METHOD ParseChunk(nsIInputStream *aInStream, void *aClosure,
+                     const char *aFromSegment, uint32_t aToOffset,
+                     uint32_t aCount, uint32_t *aWriteCount);
+  void OnParsedCue(webvtt_cue *cue);
+  void OnReportError(uint32_t line, uint32_t col, webvtt_error error);
+  TextTrackCue ConvertCueToTextTrackCue(const webvtt_cue *aCue);
+  already_AddRefed<DocumentFragment> 
+    ConvertNodeListToDocFragment(const webvtt_node *aNode, ErrorResult &rv);
+  HtmlElement ConvertNodeToHtmlElement(const webvtt_node *aNode);
+
   nsRefPtr<HTMLTrackElement> mElement;
   nsCOMPtr<nsIStreamListener> mNextListener;
   uint32_t mLoadID;
   nsAutoRef<webvtt_parser> mParser;
 };
 
+static void WEBVTT_CALLBACK OnParsedCueWebVTTCallBack(void *aUserData, 
+                                                      webvtt_cue *aCue);
+static int WEBVTT_CALLBACK OnReportErrorWebVTTCallBack(void *aUserData, 
+                                                       uint32_t aLine, 
+                                                       uint32_t aCol, 
+                                                       webvtt_error aError);
+
 } // namespace dom
 } // namespace mozilla
 
-#endif // mozilla_dom_WEBVTTLoadListner_h
+#endif // mozilla_dom_WebVTTLoadListener_h
