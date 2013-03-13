@@ -3468,6 +3468,10 @@ void nsHTMLMediaElement::FireTimeUpdate(bool aPeriodic)
     mFragmentStart = -1.0;
     mDecoder->SetFragmentEndTime(mFragmentEnd);
   }
+
+  if (mTextTracks.get()) {
+    mTextTracks->Update(time);
+  }
 }
 
 void nsHTMLMediaElement::GetCurrentSpec(nsCString& aString)
