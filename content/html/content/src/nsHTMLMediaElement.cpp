@@ -3471,6 +3471,7 @@ void nsHTMLMediaElement::FireTimeUpdate(bool aPeriodic)
     mDecoder->SetFragmentEndTime(mFragmentEnd);
   }
 
+fprintf(stderr, "\nnsHTMLMediaElement::FireTimeUpdate time=%f\n", time);
   mTextTracks->Update(time);
 }
 
