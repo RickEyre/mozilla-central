@@ -915,6 +915,10 @@ protected:
 
 public:
   webvtt_cue *mCues;
+
+  void AddTextTrack(mozilla::dom::TextTrack* aTextTrack) {
+    mTextTracks->AddTextTrack(aTextTrack);
+  }
 };
 
 #endif

@@ -1812,6 +1812,8 @@ nsHTMLMediaElement::nsHTMLMediaElement(already_AddRefed<nsINodeInfo> aNodeInfo)
 
   RegisterFreezableElement();
   NotifyOwnerDocumentActivityChanged();
+
+  mTextTracks = new TextTrackList(OwnerDoc()->GetParentObject());
 }
 
 nsHTMLMediaElement::~nsHTMLMediaElement()
@@ -3469,9 +3471,7 @@ void nsHTMLMediaElement::FireTimeUpdate(bool aPeriodic)
     mDecoder->SetFragmentEndTime(mFragmentEnd);
   }
 
-  if (mTextTracks.get()) {
-    mTextTracks->Update(time);
-  }
+  mTextTracks->Update(time);
 }
 
 void nsHTMLMediaElement::GetCurrentSpec(nsCString& aString)
@@ -3674,7 +3674,8 @@ NS_IMETHODIMP nsHTMLMediaElement::CanPlayChanged(bool canPlay)
 }
 
 /* readonly attribute nsISupports textTracks; */
-NS_IMETHODIMP nsHTMLMediaElement::GetTextTracks(nsISupports** aTextTracks)
+NS_IMETHODIMP
+nsHTMLMediaElement::GetTextTracks(nsISupports** aTextTracks)
 {
   NS_ADDREF(*aTextTracks = mTextTracks.get());
   return NS_OK;
@@ -3682,10 +3683,11 @@ NS_IMETHODIMP nsHTMLMediaElement::GetTextTracks(nsISupports** aTextTracks)
 
 /* nsISupports addTextTrack (in DOMString kind, [optional] in DOMString label,
                              [optional] in DOMString language); */
-NS_IMETHODIMP nsHTMLMediaElement::AddTextTrack(const nsAString& aKind,
-                                               const nsAString& aLabel,
-                                               const nsAString& aLanguage,
-                                               nsISupports** _retval)
+NS_IMETHODIMP
+nsHTMLMediaElement::AddTextTrack(const nsAString& aKind,
+                                 const nsAString& aLabel,
+                                 const nsAString& aLanguage,
+                                 nsISupports** _retval)
 {
   NS_ADDREF(*_retval = mTextTracks->AddTextTrack(aKind, aLabel, aLanguage).get());
   return NS_OK;
