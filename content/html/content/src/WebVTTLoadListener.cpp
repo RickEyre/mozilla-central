@@ -148,9 +148,12 @@ WebVTTLoadListener::ParseChunk(nsIInputStream *aInStream, void *aClosure,
 {
   WebVTTLoadListener* loadListener = static_cast<WebVTTLoadListener *>(aClosure);
   
+  NS_ASSERTION(loadListener->mParser, "No WebVTT parser available");
+
   // How to determine if this is the final chunk?
   if (!webvtt_parse_chunk(loadListener->mParser, aFromSegment, aCount)) {
     // TODO: Handle error
+    NS_WARNING("webvtt_parse_chunk failed");
   }
   *aWriteCount = aCount;
 
