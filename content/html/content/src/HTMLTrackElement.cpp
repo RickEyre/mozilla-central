@@ -5,7 +5,7 @@
 
 #include "HTMLTrackElement.h"
 #include "mozilla/dom/HTMLTrackElementBinding.h"
-
+#include "HTMLUnknownElement.h"
 #include "nsIDOMHTMLMediaElement.h"
 #include "nsHTMLMediaElement.h"
 #include "nsIDOMEventTarget.h"
@@ -45,7 +45,20 @@ static PRLogModuleInfo* gTrackElementLog;
 #define LOG(type, msg)
 #endif
 
-NS_IMPL_NS_NEW_HTML_ELEMENT(Track)
+// Replace the usual NS_IMPL_NS_NEW_HTML_ELEMENT(Track) so
+// we can return an UnknownElement instead when pref'd off.
+nsGenericHTMLElement*
+NS_NewHTMLTrackElement(already_AddRefed<nsINodeInfo> aNodeInfo,
+                       mozilla::dom::FromParser aFromParser)
+{
+  if (!mozilla::dom::HTMLTrackElementBinding::PrefEnabled()) {
+    return mozilla::dom::NewHTMLElementHelper::Create<nsHTMLUnknownElement,
+           mozilla::dom::HTMLUnknownElement>(aNodeInfo);
+  }
+
+  return mozilla::dom::NewHTMLElementHelper::Create<nsHTMLTrackElement,
+         mozilla::dom::HTMLTrackElement>(aNodeInfo);
+}
 
 namespace mozilla {
 namespace dom {

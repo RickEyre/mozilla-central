@@ -198,6 +198,10 @@ pref("media.peerconnection.noise", 1);
 pref("media.navigator.enabled", true);
 #endif
 #endif
+#ifdef MOZ_WEBVTT
+// TextTrack support
+pref("media.webvtt.enabled", false);
+#endif
 
 // Whether to enable Web Audio support
 pref("media.webaudio.enabled", false);
