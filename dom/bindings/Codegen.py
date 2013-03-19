@@ -7009,7 +7009,8 @@ class CGRegisterProtos(CGAbstractMethod):
 #undef REGISTER_PROTO"""
     def _registerProtos(self):
         def getPrefCheck(desc):
-            if desc.interface.getExtendedAttribute("PrefControlled") is None:
+            if (desc.interface.getExtendedAttribute("PrefControlled") is None
+                and desc.interface.getExtendedAttribute("Pref") is None):
                 return "nullptr"
             return "%sBinding::PrefEnabled" % desc.name
         lines = []
