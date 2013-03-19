@@ -1765,15 +1765,23 @@ class CGPrefEnabledNative(CGAbstractMethod):
     def __init__(self, descriptor):
         CGAbstractMethod.__init__(self, descriptor, 'PrefEnabled', 'bool', [])
 
-    def declare(self):
-        return CGAbstractMethod.declare(self)
+    def definition_body(self):
+        return "  return %s::PrefEnabled();" % self.descriptor.nativeType
 
-    def define(self):
-        return CGAbstractMethod.define(self)
+class CGPrefEnabled(CGAbstractMethod):
+    """
+    A method for testing whether the preference controlling this
+    interface is enabled. This generates code in the binding to
+    check the given preference. The interface should only be visible
+    on the global if the pref is true.
+    """
+    def __init__(self, descriptor):
+        CGAbstractMethod.__init__(self, descriptor, 'PrefEnabled', 'bool', [])
 
     def definition_body(self):
-        print "Generating PrefEnabled() body wrapping %s::PrefEnabled()" % self.descriptor.nativeType
-        return "  return %s::PrefEnabled();" % self.descriptor.nativeType
+        pref = self.descriptor.interface.getExtendedAttribute("Pref")
+        assert isinstance(pref, list) and len(pref) == 1
+        return "  return Preferences::GetBool(\"%s\");" % pref[0]
 
 class CGPrefEnabled(CGAbstractMethod):
     """
@@ -6589,10 +6597,8 @@ class CGDescriptor(CGThing):
                 not descriptor.workers):
                 if descriptor.interface.getExtendedAttribute("PrefControlled") is not None:
                     cgThings.append(CGPrefEnabledNative(descriptor))
-                    print "adding Native PrefEnabled() method."
                 elif descriptor.interface.getExtendedAttribute("Pref") is not None:
                     cgThings.append(CGPrefEnabled(descriptor))
-                    print "adding Binding PrefEnabled() method."
 
         if descriptor.concrete:
             if descriptor.proxy:
@@ -7009,8 +7015,8 @@ class CGRegisterProtos(CGAbstractMethod):
 #undef REGISTER_PROTO"""
     def _registerProtos(self):
         def getPrefCheck(desc):
-            if (desc.interface.getExtendedAttribute("PrefControlled") is None
-                and desc.interface.getExtendedAttribute("Pref") is None):
+            if (desc.interface.getExtendedAttribute("PrefControlled") is None and
+                desc.interface.getExtendedAttribute("Pref") is None):
                 return "nullptr"
             return "%sBinding::PrefEnabled" % desc.name
         lines = []
