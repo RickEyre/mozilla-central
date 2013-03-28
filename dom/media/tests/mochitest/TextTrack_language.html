@@ -1,0 +1,36 @@
+<!DOCTYPE HTML>
+<html>
+<!--
+https://bugzilla.mozilla.org/show_bug.cgi?id=833386
+-->
+<head>
+  <title>Test for Bug 833386</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css" />
+</head>
+<body>
+<a target="_blank" href="https://bugzilla.mozilla.org/show_bug.cgi?id=833386">Mozilla Bug 833386</a>
+<p id="display"></p>
+<div id="content" style="display: none">
+  <video id="video_1" src="foo.ogv">
+    <track kind="subtitles" srclang="en" />
+  </video>
+</div>
+<pre id="test">
+<script class="testbody" type="text/javascript">
+  SpecialPowers.setBoolPref("media.webvtt.enabled", true);
+  SimpleTest.waitForExplicitFinish();
+
+  function start() {
+    var video = document.getElementById('video_1');
+
+    is(video.textTracks[0].language, 'en');
+    SimpleTest.finish();
+  }
+
+  addLoadEvent(start);
+</script>
+</pre>
+</body>
+</html>

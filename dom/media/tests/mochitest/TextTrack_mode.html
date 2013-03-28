@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html>
+<!--
+https://bugzilla.mozilla.org/show_bug.cgi?id=833386
+-->
+<head>
+  <title>Test for Bug 833386</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css" />
+</head>
+<body>
+<a target="_blank" href="https://bugzilla.mozilla.org/show_bug.cgi?id=833386">Mozilla Bug 833386</a>
+<p id="display"></p>
+<div id="content" style="display: none">
+  <video id="video_1">
+    <track id="track_1" src="basic.vtt" default />
+  </video>
+</div>
+<pre id="test">
+<script class="testbody" type="text/javascript">
+  SpecialPowers.setBoolPref("media.webvtt.enabled", true);
+  SimpleTest.waitForExplicitFinish();
+
+  function start() {
+    var textTrack = document.getElementById('track_1').track;
+    
+    // default - showing
+    is(textTrack.mode, 'showing');
+
+    // bogus - default
+    textTrack.mode = 'bogus';
+    is(textTrack.mode, 'showing');
+
+    // disabled
+    textTrack.mode = 'disabled';
+    is(textTrack.mode, 'disabled');
+
+    // hidden
+    textTrack.mode = 'hidden';
+    is(textTrack.mode, 'hidden');
+
+    // showing
+    textTrack.mode = 'showing';
+    is(textTrack.mode, 'showing');
+
+    SimpleTest.finish();
+  }
+
+  addLoadEvent(start);
+
+</script>
+</pre>
+</body>
+</html>
