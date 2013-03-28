@@ -13,34 +13,26 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=833386
 <a target="_blank" href="https://bugzilla.mozilla.org/show_bug.cgi?id=833386">Mozilla Bug 833386</a>
 <p id="display"></p>
 <div id="content" style="display: none">
-  <video id="video_1">
-    <track kind="subtitles" src="fast.vtt" default />
+  <video id="video_1" src="demo.webm">
+    <track kind="subtitles" src="overlap.vtt" default />
   </video>
 </div>
 <pre id="test">
 <script class="testbody" type="text/javascript">
   SpecialPowers.setBoolPref("media.webvtt.enabled", true);
   SimpleTest.waitForExplicitFinish();
-
+  
   var textTrack;
-  function testActiveCuesWhileDisabled() {
-    textTrack.mode = 'disabled';
-
-    // activeCues should be null when mode is disabled
-    is(textTrack.activeCues, null)
-  }
 
   function start() {
     var video = document.getElementById('video_1');
     textTrack = video.textTracks[0];
+    textTrack.mode = 'disabled';
 
-    setTimeout(function() {
-      is(textTrack.activeCues.length, 1);
-    }, 100);
-    
-    setTimeout(testActiveCuesWhileDisabled, 400);
+    is(textTrack.activeCues, null);
     SimpleTest.finish();
   }
+  addLoadEvent(start);
 </script>
 </pre>
 </body>

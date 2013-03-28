@@ -13,38 +13,28 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=833386
 <a target="_blank" href="https://bugzilla.mozilla.org/show_bug.cgi?id=833386">Mozilla Bug 833386</a>
 <p id="display"></p>
 <div id="content" style="display: none">
-  <video src="demo.webm">
-    <track id="track_1" src="fast.vtt" default />
+  <video id="video_1" src="demo.webm">
+    <track kind="subtitles" src="overlap.vtt" default />
   </video>
 </div>
 <pre id="test">
 <script class="testbody" type="text/javascript">
   SpecialPowers.setBoolPref("media.webvtt.enabled", true);
   SimpleTest.waitForExplicitFinish();
-  
+
+  var textTrack;
+
   function start() {
-    var textTrack1 = document.getElementById('track_1').track;
-    
-    // default - showing
-    is(textTrack1.mode, 'showing');
+    var video = document.getElementById('video_1');
+    textTrack = video.textTracks[0];
 
-    // bogus - default
-    textTrack1.mode = 'bogus';
-    is(textTrack1.mode, 'showing');
-
-    // disabled
-    textTrack1.mode = 'disabled';
-    is(textTrack1.mode, 'disabled');
-
-    // hidden
-    textTrack1.mode = 'hidden';
-    is(textTrack1.mode, 'hidden');
-
-    // showing
-    textTrack1.mode = 'showing';
-    is(textTrack1.mode, 'showing');
-
+    video.addEventListener('seeked', seeked);
+    video.currentTime = 0.2;
     SimpleTest.finish();
+  }
+
+  function seeked() {
+    is(textTrack.activeCues.length, 1);
   }
   addLoadEvent(start);
 </script>

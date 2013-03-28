@@ -26,19 +26,9 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=833386
   function start() {
     var video = document.getElementById('video_1');
 
-    // TODO: empty label
-    /*
-     * Returns the text track label, if there is one, or the empty string otherwise (indicating that a custom label probably needs to be
-     * generated from the other attributes of the object if the object is exposed to the user).
-     *
-     * When a text track label is the empty string, the user agent should automatically generate an appropriate label from the text track's
-     * other properties (e.g. the kind of text track and the text track's language) for use in its user interface. This automatically
-     * generated label is not exposed in the API.
-    */
-
-    //is(video.textTracks[0].label, 'subtitles');
-
+    is(video.textTracks[0].label, '');
     is(video.textTracks[1].label, 'French Subtitles');
+
     SimpleTest.finish();
   }
   addLoadEvent(start);

@@ -42,7 +42,10 @@ MOCHITEST_FILES = \
   HTMLTrackElement_srclangReflect.html \
   HTMLTrackElement_kindReflect.html \
   HTMLTrackElement_track.html \
-  TextTrack_active_cues.html \
+  TextTrack_active_cues_0.html \
+  TextTrack_active_cues_1.html \
+  TextTrack_active_cues_2.html \
+  TextTrack_active_cues_null.html \
   TextTrack_cues.html \
   TextTrack_kind.html \
   TextTrack_label.html \
@@ -50,6 +53,7 @@ MOCHITEST_FILES = \
   TextTrack_cues.html \
   basic.vtt \
   fast.vtt \
+  overlap.vtt \
   head.js \
   mediaStreamPlayback.js \
   pc.js \
