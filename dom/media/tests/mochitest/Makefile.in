@@ -51,6 +51,8 @@ MOCHITEST_FILES = \
   TextTrack_label.html \
   TextTrack_language.html \
   TextTrack_cues.html \
+  TextTrack_addCue.html \
+  TextTrack_removeCue.html \
   basic.vtt \
   fast.vtt \
   overlap.vtt \
