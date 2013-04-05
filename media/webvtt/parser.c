@@ -1447,10 +1447,10 @@ read_cuetext( webvtt_parser self, const webvtt_byte *b, webvtt_uint *ppos,
   webvtt_uint pos = *ppos;
   int finished = 0;
   int flags = 0;
-
+  
+  webvtt_cue *cue = self->top->v.cue;
   /* Ensure that we have a cue to work with. */
   SAFE_ASSERT( self->top->type == V_CUE );
-  webvtt_cue *cue = self->top->v.cue;
 
   /* Hack to support re-entrance and lines spanning multiple buffers */
   if( self->line_buffer.d != 0 && self->line_buffer.d->text[

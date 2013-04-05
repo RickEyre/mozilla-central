@@ -213,8 +213,10 @@ fprintf(stderr, "WebVTTLoadListener::DisplayCueText failed!!!!!!!!!!!!!!");
     nsIContent *overlay =
       static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
     nsCOMPtr<nsIDOMNode> div = do_QueryInterface(overlay);
+    nsCOMPtr<nsIDOMNode> trackDiv = do_QueryInterface(mElement->mTrackDiv);
 
     if (div) {
+      nsCOMPtr<nsIDOMNode> resultNodeTrackDiv;
       nsCOMPtr<nsIDOMNode> resultNode;
       // TODO: Might need to remove previous children first
 fprintf(stderr, "div->AppendChild()\n");
@@ -224,8 +226,16 @@ fprintf(stderr, "div->AppendChild()\n");
       for (uint32_t i = 0; i < childCount; ++i) {
         content->RemoveChildAt(i, true);
       }
+      
+      div->AppendChild(trackDiv, getter_AddRefs(resultNodeTrackDiv));
 
-      div->AppendChild(frag.get(), getter_AddRefs(resultNode));
+      content = do_QueryInterface(trackDiv);
+      childCount = content->GetChildCount();
+      for (uint32_t i = 0; i < childCount; ++i) {
+        content->RemoveChildAt(i, true);
+      }
+
+      trackDiv->AppendChild(frag.get(), getter_AddRefs(resultNode));
     }
   }
 fprintf(stderr, "Done DisplayCueText\n");

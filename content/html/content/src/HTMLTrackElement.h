@@ -137,6 +137,9 @@ protected:
 
   nsresult LoadResource(nsIURI* aURI);
   void CreateTextTrack();
+
+  // Anonymous child which is appended to VideoFrame's caption display div.
+  nsCOMPtr<nsIContent> mTrackDiv;
 };
 
 } // namespace dom
