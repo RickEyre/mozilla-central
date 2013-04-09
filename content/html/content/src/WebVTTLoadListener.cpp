@@ -226,7 +226,7 @@ fprintf(stderr, "div->AppendChild()\n");
       for (uint32_t i = 0; i < childCount; ++i) {
         content->RemoveChildAt(i, true);
       }
-      
+
       div->AppendChild(trackDiv, getter_AddRefs(resultNodeTrackDiv));
 
       content = do_QueryInterface(trackDiv);

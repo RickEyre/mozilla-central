@@ -198,7 +198,7 @@ HTMLTrackElement::DisplayCueText(webvtt_node* head)
 {
   if (!mTrackDiv) {
     nsNodeInfoManager *nodeInfoManager = OwnerDoc()->NodeInfoManager();
-    nsCOMPtr<nsINodeInfo> nodeInfo = 
+    nsCOMPtr<nsINodeInfo> nodeInfo =
       nodeInfoManager->GetNodeInfo(nsGkAtoms::div,
                                   nullptr,
                                   kNameSpaceID_XHTML,
