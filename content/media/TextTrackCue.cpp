@@ -127,11 +127,10 @@ nsCOMPtr<nsIContent>
 TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
 {
   nsCOMPtr<nsIContent> cueTextContent;
-  nsINodeInfo* nodeInfo;
+  nsINodeInfo* nodeInfo = mTrackElement->NodeInfo();
   
   if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVTTNode->kind))
-  {   
-    nodeInfo = mTrackElement->NodeInfo();
+  {
     NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo, mozilla::dom::NOT_FROM_PARSER);
     
     nsAutoString qualifiedName;
@@ -155,7 +154,6 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         qualifiedName = NS_LITERAL_STRING("rt");
         break;
       case WEBVTT_VOICE: 
-      {
         qualifiedName = NS_LITERAL_STRING("span");
         
         nsCOMPtr<nsGenericHTMLElement> htmlElement = 
@@ -167,12 +165,11 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         
           htmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
         break;
-      }
       default:
         // TODO: What happens here?
+        cueTextContent = nullptr;
         break;
     }
-
     nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);
     
     // TODO:: Need to concatenate all applicable classes separated by spaces and
@@ -197,25 +194,30 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
     switch (aWebVTTNode->kind) {
       case WEBVTT_TEXT:
       {
-        nodeInfo = mTrackElement->NodeInfo();
         NS_NewTextNode(getter_AddRefs(cueTextContent), nodeInfo->NodeInfoManager());
 
         if (!cueTextContent) {
           return nullptr;
         }
-        {
-          const char* text = reinterpret_cast<const char *>(
-            webvtt_string_text(&aWebVTTNode->data.text));
+  
+        const char* text = reinterpret_cast<const char *>(
+          webvtt_string_text(&aWebVTTNode->data.text));
 
-          cueTextContent->SetText(NS_ConvertUTF8toUTF16(text), false);
-        }
+        cueTextContent->SetText(NS_ConvertUTF8toUTF16(text), false);
+  
         break;
       }
-      case WEBVTT_TIME_STAMP:
-        // TODO: Need to create a "ProcessingInstruction?"
+      case WEBVTT_TIME_STAMP:   
+        nsAutoString timeStamp = EmptyString();
+        timeStamp.AppendInt(aWebVTTNode->timestamp);
+        NS_NewXMLProcessingInstruction(getter_AddRefs(cueTextContent),
+                                       nodeInfo->NodeInfoManager(),
+                                       NS_LITERAL_STRING("timestamp"),
+                                       timeStamp);
         break;
       default:
         // TODO: What happens here?
+        cueTextContent = nullptr;
         break;
     }
   }
