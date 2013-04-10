@@ -172,11 +172,24 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
     }
     nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);
     
-    // TODO:: Need to concatenate all applicable classes separated by spaces and
-    //        set them to the htmlElements class attribute
-    
     htmlElement->SetAttributeNS(NS_LITERAL_STRING("html"), qualifiedName, 
                                 EmptyString());
+    
+    if(cssClasses.length > 0) {
+      webvtt_stringlist *cssClasses =
+        aWebVTTNode->data.internal_data->css_classes;
+      nsAutoString classes = EmptyString();
+      const char *text;
+    
+      text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses.items[0]));
+      classes.Append(NS_ConvertUTF8toUTF16(text));
+      
+      for(webvtt_uint i = 1; i < cssClasses->length) {
+        classes.Append(NS_LITERAL_STRING(" "));
+        text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses.items[i]));
+        classes.Append(NS_ConvertUTF8toUTF16(text));
+      }
+    }
 
     for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {
        nsCOMPtr<nsIDOMNode> resultNode, childNode;
