@@ -2,8 +2,13 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include "TextTrackCue.h"
 #include "mozilla/dom/TextTrackCueBinding.h"
+#include "mozilla/dom/HTMLMediaElement.h"
+#include "webvtt/string.h"
+#include "nsIFrame.h"
+#include "nsVideoFrame.h"
 
 namespace mozilla {
 namespace dom {
@@ -57,9 +62,188 @@ TextTrackCue::TextTrackCue(nsISupports* aGlobal,
 }
 
 void
-TextTrackCue::DisplayCue()
+TextTrackCue::RenderCue()
+{  
+  ErrorResult rv;
+  nsRefPtr<DocumentFragment> frag = GetCueAsHTML();
+  if (!frag.get() || rv.Failed()) {
+    // TODO: Do something with rv.ErrorCode here.
+  }
+
+  HTMLMediaElement* parent =
+      static_cast<HTMLMediaElement*>(mTrackElement->mMediaParent.get());
+
+  nsIFrame* frame = parent->GetPrimaryFrame();
+  if (frame && frame->GetType() == nsGkAtoms::HTMLVideoFrame) {
+
+    nsIContent *overlay =
+      static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
+    nsCOMPtr<nsIDOMNode> div = do_QueryInterface(overlay);
+
+    if (div) {
+      nsCOMPtr<nsIDOMNode> resultNode;
+
+      nsCOMPtr<nsIContent> content = do_QueryInterface(div);
+      uint32_t childCount = content->GetChildCount();
+      for (uint32_t i = 0; i < childCount; ++i) {
+        content->RemoveChildAt(i, true);
+      }
+
+      div->AppendChild(frag.get(), getter_AddRefs(resultNode));
+    }
+  }
+}
+  
+already_AddRefed<DocumentFragment>
+TextTrackCue::GetCueAsHTML()
 {
-  mTrackElement->DisplayCueText(mHead);
+  ErrorResult rv;
+  
+  // TODO: Do we need to do something with this error result?
+  // TODO: CHANGE ALL ADDREFED TO nsRefPtr
+  nsRefPtr<DocumentFragment> frag =
+    mTrackElement->OwnerDoc()->CreateDocumentFragment(rv);
+    
+  // TODO: Should this happen?  
+  if (!frag.get()) {
+    return nullptr;
+  }
+
+  nsCOMPtr<nsIDOMNode> resultNode;
+  for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {
+    
+    nsCOMPtr<nsIContent> cueTextContent = 
+      ConvertNodeToCueTextContent(mHead->data.internal_data->children[i]);
+    
+    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(cueTextContent);
+    
+    frag.get()->AppendChild(node, getter_AddRefs(resultNode));
+  }
+
+  return frag.forget();
+}
+
+// TODO: Change to iterative solution instead of recursive
+nsCOMPtr<nsIContent>
+TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
+{
+  nsCOMPtr<nsIContent> cueTextContent;
+  nsINodeInfo* nodeInfo = mTrackElement->NodeInfo();
+  
+  if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVTTNode->kind))
+  {
+    NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo, mozilla::dom::NOT_FROM_PARSER);
+    
+    nsAutoString qualifiedName;
+    switch (aWebVTTNode->kind) {
+      case WEBVTT_CLASS:
+        qualifiedName = NS_LITERAL_STRING("span");
+        break;
+      case WEBVTT_ITALIC:
+        qualifiedName = NS_LITERAL_STRING("i");
+        break;
+      case WEBVTT_BOLD:
+        qualifiedName = NS_LITERAL_STRING("b");
+        break;
+      case WEBVTT_UNDERLINE:
+        qualifiedName = NS_LITERAL_STRING("u");
+        break;
+      case WEBVTT_RUBY:
+        qualifiedName = NS_LITERAL_STRING("ruby");
+        break;
+      case WEBVTT_RUBY_TEXT:
+        qualifiedName = NS_LITERAL_STRING("rt");
+        break;
+      case WEBVTT_VOICE:
+      {
+        qualifiedName = NS_LITERAL_STRING("span");
+        
+        nsCOMPtr<nsGenericHTMLElement> htmlElement = 
+          do_QueryInterface(cueTextContent);
+        
+        const char* text = 
+          reinterpret_cast<const char *>(
+            webvtt_string_text(&aWebVTTNode->data.internal_data->annotation));
+        
+          htmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
+        break;
+      }
+      default:
+        // TODO: What happens here?
+        cueTextContent = nullptr;
+        break;
+    }
+    nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);
+    
+    htmlElement->SetAttributeNS(NS_LITERAL_STRING("html"), qualifiedName, 
+                                EmptyString());
+    
+    webvtt_stringlist *cssClasses =
+      aWebVTTNode->data.internal_data->css_classes;
+    
+    if (cssClasses->length > 0) {
+      nsAutoString classes;
+      const char *text;
+    
+      text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses->items));
+      classes.Append(NS_ConvertUTF8toUTF16(text));
+      
+      for (webvtt_uint i = 1; i < cssClasses->length; i++) {
+        classes.Append(NS_LITERAL_STRING(" "));
+        text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses->items + i));
+        classes.Append(NS_ConvertUTF8toUTF16(text));
+      }
+      
+      htmlElement->SetClassName(classes);
+    }
+
+    for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {
+       nsCOMPtr<nsIDOMNode> resultNode, childNode;
+       nsCOMPtr<nsIContent> childCueTextContent;
+       
+       childCueTextContent = ConvertNodeToCueTextContent(
+        aWebVTTNode->data.internal_data->children[i]);
+       
+       childNode = do_QueryInterface(childCueTextContent);
+       htmlElement->AppendChild(childNode, getter_AddRefs(resultNode));
+    }
+  }
+  else if (WEBVTT_IS_VALID_LEAF_NODE(aWebVTTNode->kind))
+  {
+    switch (aWebVTTNode->kind) {
+      case WEBVTT_TEXT:
+      {
+        NS_NewTextNode(getter_AddRefs(cueTextContent), nodeInfo->NodeInfoManager());
+
+        if (!cueTextContent) {
+          return nullptr;
+        }
+  
+        const char* text = reinterpret_cast<const char *>(
+          webvtt_string_text(&aWebVTTNode->data.text));
+
+        cueTextContent->SetText(NS_ConvertUTF8toUTF16(text), false);
+  
+        break;
+      }
+      case WEBVTT_TIME_STAMP:
+      {
+        nsAutoString timeStamp;
+        timeStamp.AppendInt(aWebVTTNode->data.timestamp);
+        NS_NewXMLProcessingInstruction(getter_AddRefs(cueTextContent),
+                                       nodeInfo->NodeInfoManager(),
+                                       NS_LITERAL_STRING("timestamp"),
+                                       timeStamp);
+        break;
+      }
+      default:
+        // TODO: What happens here?
+        cueTextContent = nullptr;
+        break;
+    }
+  }
+
+  return cueTextContent;
 }
 
 JSObject*
