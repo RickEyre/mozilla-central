@@ -63,7 +63,7 @@ TextTrackCue::TextTrackCue(nsISupports* aGlobal,
 
 void
 TextTrackCue::RenderCue()
-{  
+{
   ErrorResult rv;
   nsRefPtr<DocumentFragment> frag = GetCueAsHTML();
   if (!frag.get() || rv.Failed()) {
@@ -100,7 +100,6 @@ TextTrackCue::GetCueAsHTML()
   ErrorResult rv;
   
   // TODO: Do we need to do something with this error result?
-  // TODO: CHANGE ALL ADDREFED TO nsRefPtr
   nsRefPtr<DocumentFragment> frag =
     mTrackElement->OwnerDoc()->CreateDocumentFragment(rv);
     
@@ -110,8 +109,7 @@ TextTrackCue::GetCueAsHTML()
   }
 
   nsCOMPtr<nsIDOMNode> resultNode;
-  for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {
-    
+  for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {    
     nsCOMPtr<nsIContent> cueTextContent = 
       ConvertNodeToCueTextContent(mHead->data.internal_data->children[i]);
     
@@ -128,44 +126,34 @@ nsCOMPtr<nsIContent>
 TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
 {
   nsCOMPtr<nsIContent> cueTextContent;
-  nsINodeInfo* nodeInfo = mTrackElement->NodeInfo();
+  nsCOMPtr<nsINodeInfo> nodeInfo;
+  nsNodeInfoManager *nimgr = aParentNodeInfo->NodeInfoManager();
   
   if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVTTNode->kind))
   {
-    NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo, mozilla::dom::NOT_FROM_PARSER);
-    
-    nsAutoString qualifiedName;
+    nsIAtom *atomName;
     switch (aWebVTTNode->kind) {
-      case WEBVTT_CLASS:
-        qualifiedName = NS_LITERAL_STRING("span");
+      case WEBVTT_BOLD:
+        atomName = nsGkAtoms::b;
         break;
       case WEBVTT_ITALIC:
-        qualifiedName = NS_LITERAL_STRING("i");
-        break;
-      case WEBVTT_BOLD:
-        qualifiedName = NS_LITERAL_STRING("b");
+        atomName = nsGkAtoms::i;
         break;
       case WEBVTT_UNDERLINE:
-        qualifiedName = NS_LITERAL_STRING("u");
+        atomName = nsGkAtoms::u;
         break;
       case WEBVTT_RUBY:
-        qualifiedName = NS_LITERAL_STRING("ruby");
+        atomName = nsGkAtoms::ruby;
         break;
       case WEBVTT_RUBY_TEXT:
-        qualifiedName = NS_LITERAL_STRING("rt");
+        atomName = nsGkAtoms::rt;
         break;
       case WEBVTT_VOICE:
       {
-        qualifiedName = NS_LITERAL_STRING("span");
-        
-        nsCOMPtr<nsGenericHTMLElement> htmlElement = 
-          do_QueryInterface(cueTextContent);
-        
-        const char* text = 
-          reinterpret_cast<const char *>(
-            webvtt_string_text(&aWebVTTNode->data.internal_data->annotation));
-        
-          htmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
+        atomName = nsGkAtoms::span;
+        break;
+      case WEBVTT_CLASS:
+        atomName = nsGkAtoms::span;
         break;
       }
       default:
@@ -173,18 +161,28 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         cueTextContent = nullptr;
         break;
     }
-    nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);
+    nodeInfo = nimgr->GetNodeInfo(atomName, nullptr, kNameSpaceID_XHTML,
+                                  nsIDOMNode::ELEMENT_NODE);
     
-    htmlElement->SetAttributeNS(NS_LITERAL_STRING("html"), qualifiedName, 
-                                EmptyString());
+    NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo.forget(),
+                      mozilla::dom::NOT_FROM_PARSER);
     
-    webvtt_stringlist *cssClasses =
-      aWebVTTNode->data.internal_data->css_classes;
+    if (aWebVTTNode->kind == WEBVTT_VOICE) {
+      nsCOMPtr<nsGenericHTMLElement> genericHtmlElement =
+        do_QueryInterface(cueTextContent);
+      
+      const char* text = reinterpret_cast<const char *>(
+          webvtt_string_text(&aWebVTTNode->data.internal_data->annotation));
+      
+      genericHtmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
+    }
+    
+    webvtt_stringlist *cssClasses = aWebVTTNode->data.internal_data->css_classes;
     
     if (cssClasses->length > 0) {
       nsAutoString classes;
       const char *text;
-    
+  
       text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses->items));
       classes.Append(NS_ConvertUTF8toUTF16(text));
       
@@ -193,19 +191,20 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses->items + i));
         classes.Append(NS_ConvertUTF8toUTF16(text));
       }
-      
+    
       htmlElement->SetClassName(classes);
     }
 
-    for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {
-       nsCOMPtr<nsIDOMNode> resultNode, childNode;
-       nsCOMPtr<nsIContent> childCueTextContent;
-       
-       childCueTextContent = ConvertNodeToCueTextContent(
+    for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {   
+      nsCOMPtr<nsIDOMNode> resultNode, childNode;
+      nsCOMPtr<nsIContent> childCueTextContent;
+
+      childCueTextContent = ConvertNodeToCueTextContent(
         aWebVTTNode->data.internal_data->children[i]);
-       
-       childNode = do_QueryInterface(childCueTextContent);
-       htmlElement->AppendChild(childNode, getter_AddRefs(resultNode));
+      
+      childNode = do_QueryInterface(childCueTextContent); 
+      nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);  
+      htmlElement->AppendChild(childNode, getter_AddRefs(resultNode));
     }
   }
   else if (WEBVTT_IS_VALID_LEAF_NODE(aWebVTTNode->kind))
@@ -213,7 +212,7 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
     switch (aWebVTTNode->kind) {
       case WEBVTT_TEXT:
       {
-        NS_NewTextNode(getter_AddRefs(cueTextContent), nodeInfo->NodeInfoManager());
+        NS_NewTextNode(getter_AddRefs(cueTextContent), nimgr);
 
         if (!cueTextContent) {
           return nullptr;
