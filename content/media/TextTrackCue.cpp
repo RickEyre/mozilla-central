@@ -62,12 +62,28 @@ TextTrackCue::TextTrackCue(nsISupports* aGlobal,
 }
 
 void
+TextTrackCue::CreateCueOverlay() 
+{
+  nsNodeInfoManager *nodeInfoManager = mTrackElement->NodeInfo()->NodeInfoManager();
+  nsCOMPtr<nsINodeInfo> nodeInfo =
+    nodeInfoManager->GetNodeInfo(nsGkAtoms::div,
+                                nullptr,
+                                kNameSpaceID_XHTML,
+                                nsIDOMNode::ELEMENT_NODE);
+  mCueDiv = NS_NewHTMLDivElement(nodeInfo.forget());
+}
+
+void
 TextTrackCue::RenderCue()
 {
   ErrorResult rv;
   nsRefPtr<DocumentFragment> frag = GetCueAsHTML();
   if (!frag.get() || rv.Failed()) {
     // TODO: Do something with rv.ErrorCode here.
+  }
+
+  if (!mCueDiv) {
+    CreateCueOverlay();
   }
 
   HTMLMediaElement* parent =
@@ -79,8 +95,10 @@ TextTrackCue::RenderCue()
     nsIContent *overlay =
       static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
     nsCOMPtr<nsIDOMNode> div = do_QueryInterface(overlay);
+    nsCOMPtr<nsIDOMNode> cueDiv = do_QueryInterface(mCueDiv);
 
     if (div) {
+      nsCOMPtr<nsIDOMNode> resultNodeCueDiv;
       nsCOMPtr<nsIDOMNode> resultNode;
 
       nsCOMPtr<nsIContent> content = do_QueryInterface(div);
@@ -89,7 +107,15 @@ TextTrackCue::RenderCue()
         content->RemoveChildAt(i, true);
       }
 
-      div->AppendChild(frag.get(), getter_AddRefs(resultNode));
+      div->AppendChild(cueDiv, getter_AddRefs(resultNodeCueDiv));
+
+      content = do_QueryInterface(cueDiv);
+      childCount = content->GetChildCount();
+      for (uint32_t i = 0; i < childCount; ++i) {
+        content->RemoveChildAt(i, true);
+      }
+
+      cueDiv->AppendChild(frag.get(), getter_AddRefs(resultNode));
     }
   }
 }
