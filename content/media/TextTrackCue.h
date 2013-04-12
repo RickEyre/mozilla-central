@@ -235,6 +235,7 @@ public:
 
 private:
   void CueChanged();
+  void CreateCueOverlay();
 
   nsCOMPtr<nsISupports> mGlobal;
   nsString mText;
@@ -252,6 +253,9 @@ private:
   nsString mVertical;
   double mLine;
   TextTrackCueAlign mAlign;
+
+  // Anonymous child which is appended to VideoFrame's caption display div.
+  nsCOMPtr<nsIContent> mCueDiv;
 };
 
 } // namespace dom
