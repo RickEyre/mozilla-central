@@ -127,7 +127,7 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
 {
   nsCOMPtr<nsIContent> cueTextContent;
   nsCOMPtr<nsINodeInfo> nodeInfo;
-  nsNodeInfoManager *nimgr = aParentNodeInfo->NodeInfoManager();
+  nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
   
   if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVTTNode->kind))
   {
@@ -191,7 +191,8 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses->items + i));
         classes.Append(NS_ConvertUTF8toUTF16(text));
       }
-    
+      
+      nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);
       htmlElement->SetClassName(classes);
     }
 
