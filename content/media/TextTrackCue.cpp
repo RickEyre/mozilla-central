@@ -124,7 +124,6 @@ already_AddRefed<DocumentFragment>
 TextTrackCue::GetCueAsHTML()
 {
   ErrorResult rv;
-  
   // TODO: Do we need to do something with this error result?
   nsRefPtr<DocumentFragment> frag =
     mTrackElement->OwnerDoc()->CreateDocumentFragment(rv);
@@ -134,13 +133,12 @@ TextTrackCue::GetCueAsHTML()
     return nullptr;
   }
 
-  nsCOMPtr<nsIDOMNode> resultNode;
+  nsCOMPtr<nsIDOMNode> resultNode, node;
+  nsCOMPtr<nsIContent> cueTextContent;
   for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {    
-    nsCOMPtr<nsIContent> cueTextContent = 
-      ConvertNodeToCueTextContent(mHead->data.internal_data->children[i]);
-    
-    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(cueTextContent);
-    
+    cueTextContent = ConvertNodeToCueTextContent(
+                              mHead->data.internal_data->children[i]);
+    node = do_QueryInterface(cueTextContent);
     frag.get()->AppendChild(node, getter_AddRefs(resultNode));
   }
 
@@ -221,16 +219,16 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
       nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);
       htmlElement->SetClassName(classes);
     }
-
+    
+    nsCOMPtr<nsIDOMNode> resultNode, childNode;
+    nsCOMPtr<nsIContent> childCueTextContent;
+    nsCOMPtr<nsIDOMHTMLElement> htmlElement
     for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {   
-      nsCOMPtr<nsIDOMNode> resultNode, childNode;
-      nsCOMPtr<nsIContent> childCueTextContent;
-
       childCueTextContent = ConvertNodeToCueTextContent(
         aWebVTTNode->data.internal_data->children[i]);
       
       childNode = do_QueryInterface(childCueTextContent); 
-      nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);  
+      htmlElement = do_QueryInterface(cueTextContent);  
       htmlElement->AppendChild(childNode, getter_AddRefs(resultNode));
     }
   }
@@ -244,12 +242,10 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         if (!cueTextContent) {
           return nullptr;
         }
-  
         const char* text = reinterpret_cast<const char *>(
           webvtt_string_text(&aWebVTTNode->data.text));
 
         cueTextContent->SetText(NS_ConvertUTF8toUTF16(text), false);
-  
         break;
       }
       case WEBVTT_TIME_STAMP:
