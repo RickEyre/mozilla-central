@@ -140,6 +140,7 @@ webidl_files = \
   HTMLTableSectionElement.webidl \
   HTMLTemplateElement.webidl \
   HTMLTextAreaElement.webidl \
+  HTMLTrackElement.webidl \
   HTMLTimeElement.webidl \
   HTMLTitleElement.webidl \
   HTMLUListElement.webidl \
@@ -281,6 +282,10 @@ webidl_files = \
   Text.webidl \
   TextDecoder.webidl \
   TextEncoder.webidl \
+  TextTrack.webidl \
+  TextTrackList.webidl \
+  TextTrackCue.webidl \
+  TextTrackCueList.webidl \
   TimeRanges.webidl \
   TransitionEvent.webidl \
   TreeWalker.webidl \
