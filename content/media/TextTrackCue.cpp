@@ -173,13 +173,11 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         atomName = nsGkAtoms::rt;
         break;
       case WEBVTT_VOICE:
-      {
         atomName = nsGkAtoms::span;
         break;
       case WEBVTT_CLASS:
         atomName = nsGkAtoms::span;
         break;
-      }
       default:
         // TODO: What happens here?
         cueTextContent = nullptr;
@@ -222,7 +220,7 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
     
     nsCOMPtr<nsIDOMNode> resultNode, childNode;
     nsCOMPtr<nsIContent> childCueTextContent;
-    nsCOMPtr<nsIDOMHTMLElement> htmlElement
+    nsCOMPtr<nsIDOMHTMLElement> htmlElement;
     for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {   
       childCueTextContent = ConvertNodeToCueTextContent(
         aWebVTTNode->data.internal_data->children[i]);
