@@ -62,7 +62,7 @@ public:
     return mTrack;
   }
 
-  void GetId(nsAString& aId) const
+  void GetId(DOMString& aId) const
   {
     aId = mId;
   }
@@ -121,7 +121,7 @@ public:
     CueChanged();
   }
 
-  void GetVertical(nsAString& aVertical)
+  void GetVertical(DOMString& aVertical)
   {
     aVertical = mVertical;
   }
@@ -205,7 +205,7 @@ public:
     CueChanged();
   }
 
-  void GetText(nsAString& aText) const
+  void GetText(DOMString& aText) const
   {
     aText = mText;
   }

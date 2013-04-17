@@ -42,19 +42,19 @@ public:
     return mParent;
   }
 
-  void GetKind(nsAString& aKind) const
+  void GetKind(DOMString& aKind) const
   {
     aKind = mKind;
   }
-  void GetLabel(nsAString& aLabel) const
+  void GetLabel(DOMString& aLabel) const
   {
     aLabel = mLabel;
   }
-  void GetLanguage(nsAString& aLanguage) const
+  void GetLanguage(DOMString& aLanguage) const
   {
     aLanguage = mLanguage;
   }
-  void GetInBandMetadataTrackDispatchType(nsAString& aType) const
+  void GetInBandMetadataTrackDispatchType(DOMString& aType) const
   {
     aType = mType;
   }
