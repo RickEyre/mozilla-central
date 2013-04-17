@@ -57,9 +57,10 @@ TextTrackCueList::GetCueById(const nsAString& aId)
   }
 
   for (uint32_t i = 0; i < mList.Length(); i++) {
-    nsString tid;
+    DOMString tid;
     mList[i]->GetId(tid);
-    if (aId.Equals(tid)) {
+    nsString theId = tid.AsAString();
+    if (aId.Equals(theId)) {
       return mList[i];
     }
   }
