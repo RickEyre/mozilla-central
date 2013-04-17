@@ -76,10 +76,9 @@ TextTrackCue::CreateCueOverlay()
 void
 TextTrackCue::RenderCue()
 {
-  ErrorResult rv;
   nsRefPtr<DocumentFragment> frag = GetCueAsHTML();
-  if (!frag.get() || rv.Failed()) {
-    // TODO: Do something with rv.ErrorCode here.
+  if (!frag.get()) {
+    // TODO: Do something with error here.
   }
 
   if (!mCueDiv) {
@@ -94,28 +93,19 @@ TextTrackCue::RenderCue()
 
     nsIContent *overlay =
       static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
-    nsCOMPtr<nsIDOMNode> div = do_QueryInterface(overlay);
-    nsCOMPtr<nsIDOMNode> cueDiv = do_QueryInterface(mCueDiv);
-
+    nsCOMPtr<nsINode> div = do_QueryInterface(overlay);
+    nsCOMPtr<nsINode> cueDiv = do_QueryInterface(mCueDiv);
+    
     if (div) {
-      nsCOMPtr<nsIDOMNode> resultNodeCueDiv;
-      nsCOMPtr<nsIDOMNode> resultNode;
+      ErrorResult rv;
 
       nsCOMPtr<nsIContent> content = do_QueryInterface(div);
-      uint32_t childCount = content->GetChildCount();
-      for (uint32_t i = 0; i < childCount; ++i) {
-        content->RemoveChildAt(i, true);
-      }
-
-      div->AppendChild(cueDiv, getter_AddRefs(resultNodeCueDiv));
+      nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
+      div->AppendChild(*cueDiv, rv);
 
       content = do_QueryInterface(cueDiv);
-      childCount = content->GetChildCount();
-      for (uint32_t i = 0; i < childCount; ++i) {
-        content->RemoveChildAt(i, true);
-      }
-
-      cueDiv->AppendChild(frag.get(), getter_AddRefs(resultNode));
+      nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
+      cueDiv->AppendChild(*frag, rv);
     }
   }
 }
@@ -133,15 +123,15 @@ TextTrackCue::GetCueAsHTML()
   if (!frag.get()) {
     return nullptr;
   }
-
-  nsCOMPtr<nsIDOMNode> resultNode;
+  
   for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {    
     nsCOMPtr<nsIContent> cueTextContent = 
       ConvertNodeToCueTextContent(mHead->data.internal_data->children[i]);
     
+    // TODO: Get rid of nsIDOMNode stuff. Ambiguous error if try to cast to nsINode.
     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(cueTextContent);
-    
-    frag.get()->AppendChild(node, getter_AddRefs(resultNode));
+    nsCOMPtr<nsIDOMNode> result;
+    frag->AppendChild(node, getter_AddRefs(result));
   }
 
   return frag.forget();
@@ -222,16 +212,14 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
       htmlElement->SetClassName(classes);
     }
 
+    ErrorResult rv;
     for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {   
-      nsCOMPtr<nsIDOMNode> resultNode, childNode;
-      nsCOMPtr<nsIContent> childCueTextContent;
-
-      childCueTextContent = ConvertNodeToCueTextContent(
+      nsCOMPtr<nsIContent> childCueTextContent = ConvertNodeToCueTextContent(
         aWebVTTNode->data.internal_data->children[i]);
       
-      childNode = do_QueryInterface(childCueTextContent); 
-      nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);  
-      htmlElement->AppendChild(childNode, getter_AddRefs(resultNode));
+      nsCOMPtr<nsINode> childNode = do_QueryInterface(childCueTextContent); 
+      nsCOMPtr<nsINode> htmlElement = do_QueryInterface(cueTextContent);  
+      htmlElement->AppendChild(*childNode, rv);
     }
   }
   else if (WEBVTT_IS_VALID_LEAF_NODE(aWebVTTNode->kind))
