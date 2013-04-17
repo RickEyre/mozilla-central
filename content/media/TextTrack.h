@@ -44,19 +44,19 @@ public:
 
   void GetKind(DOMString& aKind) const
   {
-    aKind = mKind;
+    aKind.SetStringBuffer( nsStringBuffer::FromString(mKind), mKind.Length() );
   }
   void GetLabel(DOMString& aLabel) const
   {
-    aLabel = mLabel;
+    aLabel.SetStringBuffer( nsStringBuffer::FromString(mLabel), mLabel.Length() );
   }
   void GetLanguage(DOMString& aLanguage) const
   {
-    aLanguage = mLanguage;
+    aLanguage.SetStringBuffer( nsStringBuffer::FromString(mLanguage), mLanguage.Length() );
   }
   void GetInBandMetadataTrackDispatchType(DOMString& aType) const
   {
-    aType = mType;
+    aType.SetStringBuffer( nsStringBuffer::FromString(mType), mType.Length() );
   }
 
   TextTrackMode Mode() const
