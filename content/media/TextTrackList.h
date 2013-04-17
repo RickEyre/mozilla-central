@@ -56,7 +56,7 @@ public:
 
 private:
   nsCOMPtr<nsISupports> mGlobal;
-  nsTArray<nsRefPtr<TextTrack>> mTextTracks;
+  nsTArray< nsRefPtr<TextTrack> > mTextTracks;
 };
 
 } // namespace dom
