@@ -31,28 +31,23 @@
 # include <webvtt/string.h>
 # include <webvtt/cue.h>
 
-typedef enum webvtt_token_type_t webvtt_token_type;
-typedef enum webvtt_token_state_t webvtt_token_state;
-
 typedef struct webvtt_cuetext_token_t webvtt_cuetext_token;
 typedef struct webvtt_start_token_data_t webvtt_start_token_data;
 
 /**
  * Enumerates token types.
  */
-enum
-webvtt_token_type_t {
+typedef enum {
   START_TOKEN, /* Identifies a webvtt_cue_text_start_tag_token. */
   END_TOKEN, /* Identifies a webvtt_cue_text_end_tag_token. */
   TIME_STAMP_TOKEN, /* Identifies a webvtt_cue_text_time_stamp_token. */
   TEXT_TOKEN /* Identifies a webvtt_cue_text_text_token. */
-};
+} webvtt_token_type;
 
 /**
  * Enumerates possible states that the cue text tokenizer can be in.
  */
-enum
-webvtt_token_state_t {
+typedef enum {
   DATA, /* Initial state. */
   ESCAPE, /* Parsing an escape value. */
   TAG, /* Reached a '<' character, about to start parsing a tag. */
@@ -67,7 +62,7 @@ webvtt_token_state_t {
               '/' character. */
   TIME_STAMP_TAG /* Parsing a time stamp tag. Reached when a '<' character is
                     follwed by an integer character. */
-};
+} webvtt_token_state;
 
 /**
  * Represents a start tag in the cue text.
@@ -135,7 +130,7 @@ WEBVTT_INTERN webvtt_status webvtt_create_node_from_token( webvtt_cuetext_token 
  * cue text parser.
  * Referenced from - http://dev.w3.org/html5/webvtt/#webvtt-cue-text-tokenizer
  */
-WEBVTT_INTERN webvtt_status webvtt_tokenizer( webvtt_byte **position, webvtt_cuetext_token **token );
+WEBVTT_INTERN webvtt_status webvtt_tokenizer( const char **position, webvtt_cuetext_token **token );
 
 /**
  * Routines that take care of certain states in the webvtt cue text tokenizer.
@@ -144,50 +139,50 @@ WEBVTT_INTERN webvtt_status webvtt_tokenizer( webvtt_byte **position, webvtt_cue
 /**
  * Referenced from http://dev.w3.org/html5/webvtt/#webvtt-data-state
  */
-WEBVTT_INTERN webvtt_status webvtt_data_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_data_state( const char **position,
   webvtt_token_state *token_state, webvtt_string *result );
 
 /**
  * Referenced from http://dev.w3.org/html5/webvtt/#webvtt-escape-state
  */
-WEBVTT_INTERN webvtt_status webvtt_escape_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_escape_state( const char **position,
   webvtt_token_state *token_state, webvtt_string *result );
 
 /**
  * Referenced from http://dev.w3.org/html5/webvtt/#webvtt-tag-state
  */
-WEBVTT_INTERN webvtt_status webvtt_tag_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_tag_state( const char **position,
   webvtt_token_state *token_state, webvtt_string *result );
 
 /**
  * Referenced from http://dev.w3.org/html5/webvtt/#webvtt-start-tag-state
  */
-WEBVTT_INTERN webvtt_status webvtt_start_tag_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_start_tag_state( const char **position,
   webvtt_token_state *token_state, webvtt_string *result );
 
 /**
  * Referenced from http://dev.w3.org/html5/webvtt/#webvtt-start-tag-class-state
  */
-WEBVTT_INTERN webvtt_status webvtt_class_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_class_state( const char **position,
   webvtt_token_state *token_state, webvtt_stringlist *css_classes );
 
 /**
  * Referenced from 
  * http://dev.w3.org/html5/webvtt/#webvtt-start-tag-annotation-state
  */
-WEBVTT_INTERN webvtt_status webvtt_annotation_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_annotation_state( const char **position,
   webvtt_token_state *token_state, webvtt_string *annotation );
 
 /**
  * Referenced from http://dev.w3.org/html5/webvtt/#webvtt-end-tag-state
  */
-WEBVTT_INTERN webvtt_status webvtt_end_tag_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_end_tag_state( const char **position,
   webvtt_token_state *token_state, webvtt_string *result );
 
 /**
  * Referenced from http://dev.w3.org/html5/webvtt/#webvtt-timestamp-tag-state
  */
-WEBVTT_INTERN webvtt_status webvtt_timestamp_state( webvtt_byte **position,
+WEBVTT_INTERN webvtt_status webvtt_timestamp_state( const char **position,
   webvtt_token_state *token_state, webvtt_string *result );
 
 WEBVTT_INTERN webvtt_status webvtt_parse_cuetext( webvtt_parser self, webvtt_cue *cue, webvtt_string *payload, int finished );

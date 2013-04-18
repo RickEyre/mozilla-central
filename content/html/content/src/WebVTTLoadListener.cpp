@@ -191,8 +191,6 @@ void
 WebVTTLoadListener::OnReportError(uint32_t aLine, uint32_t aCol, 
                                   webvtt_error aError)
 {
-  // TODO: Handle error here, been suggessted that we just use PR_LOGGING
-  fprintf(stderr, "\nOnReportError aLine=%d aCol=%d aError=%d\n", aLine, aCol, aError);
 }
 
 void WEBVTT_CALLBACK

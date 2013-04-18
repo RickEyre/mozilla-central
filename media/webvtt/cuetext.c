@@ -33,8 +33,6 @@
 #include "cue_internal.h"
 #include "string_internal.h"
 
-static void webvtt_skipwhite( webvtt_byte **position );
-
 #ifdef min
 # undef min
 #endif
@@ -67,19 +65,6 @@ do \
     status_var = returned_status; \
     goto dealloc; \
   } \
-
-/**
- * This will only work on null-terminated strings, remember that!
- */
-static void
-webvtt_skipwhite( webvtt_byte **position )
-{
-  webvtt_byte *p = *position;
-  while( *p && webvtt_iswhite(*p) ) {
-    ++p;
-  }
-  *position = p;
-}
 
 WEBVTT_INTERN webvtt_status
 webvtt_create_token( webvtt_cuetext_token **token, webvtt_token_type token_type )
@@ -193,7 +178,7 @@ webvtt_delete_token( webvtt_cuetext_token **token )
 WEBVTT_INTERN int
 tag_accepts_annotation( webvtt_string *tag_name )
 {
-  return webvtt_string_is_equal( tag_name, ( webvtt_byte * )"v", 1 );
+  return webvtt_string_is_equal( tag_name, ( char * )"v", 1 );
 }
 
 WEBVTT_INTERN webvtt_status
@@ -205,25 +190,25 @@ webvtt_node_kind_from_tag_name( webvtt_string *tag_name, webvtt_node_kind *kind 
 
   if( webvtt_string_length(tag_name) == 1 ) {
     switch( webvtt_string_text(tag_name)[0] ) {
-      case( UTF8_B ):
+      case( 'b' ):
         *kind = WEBVTT_BOLD;
         break;
-      case( UTF8_I ):
+      case( 'i' ):
         *kind = WEBVTT_ITALIC;
         break;
-      case( UTF8_U ):
+      case( 'u' ):
         *kind = WEBVTT_UNDERLINE;
         break;
-      case( UTF8_C ):
+      case( 'c' ):
         *kind = WEBVTT_CLASS;
         break;
-      case( UTF8_V ):
+      case( 'v' ):
         *kind = WEBVTT_VOICE;
         break;
     }
-  } else if( webvtt_string_is_equal( tag_name, ( webvtt_byte * )"ruby", 4 ) ) {
+  } else if( webvtt_string_is_equal( tag_name, ( char * )"ruby", 4 ) ) {
     *kind = WEBVTT_RUBY;
-  } else if( webvtt_string_is_equal( tag_name, ( webvtt_byte * )"rt", 2 ) ) {
+  } else if( webvtt_string_is_equal( tag_name, ( char * )"rt", 2 ) ) {
     *kind = WEBVTT_RUBY_TEXT;
   } else {
     return WEBVTT_INVALID_TAG_NAME;
@@ -271,22 +256,22 @@ webvtt_create_node_from_token( webvtt_cuetext_token *token, webvtt_node **node, 
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_data_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_data_state( const char **position, webvtt_token_state *token_state, 
                    webvtt_string *result )
 {
   for ( ; *token_state == DATA; (*position)++ ) {
     switch( **position ) {
-      case UTF8_AMPERSAND:
+      case '&':
         *token_state = ESCAPE;
         break;
-      case UTF8_LESS_THAN:
+      case '<':
         if( webvtt_string_length(result) == 0 ) {
           *token_state = TAG;
         } else {
           return WEBVTT_SUCCESS;
         }
         break;
-      case UTF8_NULL_BYTE:
+      case '\0':
         return WEBVTT_SUCCESS;
         break;
       default:
@@ -305,15 +290,15 @@ webvtt_data_state( webvtt_byte **position, webvtt_token_state *token_state,
 #define LRM_REPLACE_LENGTH    3
 #define NBSP_REPLACE_LENGTH   2
  
-webvtt_byte rlm_replace[RLM_REPLACE_LENGTH] = { UTF8_RIGHT_TO_LEFT_1, 
+char rlm_replace[RLM_REPLACE_LENGTH] = { UTF8_RIGHT_TO_LEFT_1, 
     UTF8_RIGHT_TO_LEFT_2, UTF8_RIGHT_TO_LEFT_3 };
-webvtt_byte lrm_replace[LRM_REPLACE_LENGTH] = { UTF8_LEFT_TO_RIGHT_1,
+char lrm_replace[LRM_REPLACE_LENGTH] = { UTF8_LEFT_TO_RIGHT_1,
   UTF8_LEFT_TO_RIGHT_2, UTF8_LEFT_TO_RIGHT_3 };
-webvtt_byte nbsp_replace[NBSP_REPLACE_LENGTH] = { UTF8_NO_BREAK_SPACE_1,
+char nbsp_replace[NBSP_REPLACE_LENGTH] = { UTF8_NO_BREAK_SPACE_1,
   UTF8_NO_BREAK_SPACE_2 };
   
 WEBVTT_INTERN webvtt_status
-webvtt_escape_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_escape_state( const char **position, webvtt_token_state *token_state, 
                      webvtt_string *result )
 {
   webvtt_string buffer;
@@ -325,14 +310,14 @@ webvtt_escape_state( webvtt_byte **position, webvtt_token_state *token_state,
    * Append ampersand here because the algorithm is not able to add it to the
    * buffer when it reads it in the DATA state tokenizer.
    */
-  CHECK_MEMORY_OP_JUMP( status, webvtt_string_putc( &buffer, UTF8_AMPERSAND ) );
+  CHECK_MEMORY_OP_JUMP( status, webvtt_string_putc( &buffer, '&' ) );
 
   for( ; *token_state == ESCAPE; (*position)++ ) {
     /**
      * We have encountered a token termination point.
      * Append buffer to result and return success.
      */
-    if( **position == UTF8_NULL_BYTE || **position == UTF8_LESS_THAN ) {
+    if( **position == '\0' || **position == '<' ) {
       CHECK_MEMORY_OP_JUMP( status, webvtt_string_append_string( result, &buffer ) );
       goto dealloc;
     }
@@ -341,7 +326,7 @@ webvtt_escape_state( webvtt_byte **position, webvtt_token_state *token_state,
      * This means that we need to add that malformed text to the result and
      * recreate the buffer to prepare for a new escape sequence.
      */
-    else if( **position == UTF8_AMPERSAND ) {
+    else if( **position == '&' ) {
       CHECK_MEMORY_OP_JUMP( status, webvtt_string_append_string( result, &buffer ) );
       webvtt_release_string( &buffer );
       CHECK_MEMORY_OP_JUMP( status, webvtt_create_string( 1, &buffer ) );
@@ -352,18 +337,18 @@ webvtt_escape_state( webvtt_byte **position, webvtt_token_state *token_state,
      * Check if buffer contains a valid escape sequence and if it does append
      * the interpretation to result and change the state to DATA.
      */
-    else if( **position == UTF8_SEMI_COLON ) {
-      if( webvtt_string_is_equal( &buffer, ( webvtt_byte * )"&amp", 4 ) ) {
+    else if( **position == ';' ) {
+      if( webvtt_string_is_equal( &buffer, ( char * )"&amp", 4 ) ) {
         CHECK_MEMORY_OP_JUMP( status, webvtt_string_putc( result, '&' ) );
-      } else if( webvtt_string_is_equal( &buffer, ( webvtt_byte * )"&lt", 3 ) ) {
+      } else if( webvtt_string_is_equal( &buffer, ( char * )"&lt", 3 ) ) {
         CHECK_MEMORY_OP_JUMP( status, webvtt_string_putc( result, '<' ) );
-      } else if( webvtt_string_is_equal( &buffer, ( webvtt_byte * )"&gt", 3 ) ) {
+      } else if( webvtt_string_is_equal( &buffer, ( char * )"&gt", 3 ) ) {
         CHECK_MEMORY_OP_JUMP( status, webvtt_string_putc( result, '>' ) );
-      } else if( webvtt_string_is_equal( &buffer, ( webvtt_byte * )"&rlm", 4 ) ) {
+      } else if( webvtt_string_is_equal( &buffer, ( char * )"&rlm", 4 ) ) {
         CHECK_MEMORY_OP_JUMP( status, webvtt_string_append( result, rlm_replace, RLM_REPLACE_LENGTH ) );
-      } else if( webvtt_string_is_equal( &buffer, ( webvtt_byte * )"&lrm", 4 ) ) {
+      } else if( webvtt_string_is_equal( &buffer, ( char * )"&lrm", 4 ) ) {
         CHECK_MEMORY_OP_JUMP( status, webvtt_string_append( result, lrm_replace, LRM_REPLACE_LENGTH ) );
-      } else if( webvtt_string_is_equal( &buffer, ( webvtt_byte * )"&nbsp", 5 ) ) {
+      } else if( webvtt_string_is_equal( &buffer, ( char * )"&nbsp", 5 ) ) {
         CHECK_MEMORY_OP_JUMP( status, webvtt_string_append( result, nbsp_replace, NBSP_REPLACE_LENGTH ) );
       } else {
         CHECK_MEMORY_OP_JUMP( status, webvtt_string_append_string( result, &buffer ) );
@@ -400,29 +385,29 @@ dealloc:
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_tag_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_tag_state( const char **position, webvtt_token_state *token_state, 
                   webvtt_string *result )
 {
   for( ; *token_state == TAG; (*position)++ ) {
-    if( **position == UTF8_TAB || **position == UTF8_LINE_FEED ||
-        **position == UTF8_CARRIAGE_RETURN || **position == UTF8_FORM_FEED ||
-        **position == UTF8_SPACE ) {
+    if( **position == '\t' || **position == '\n' ||
+        **position == '\r' || **position == '\f' ||
+        **position == ' ' ) {
       *token_state = START_TAG_ANNOTATION;
     } else if( webvtt_isdigit( **position )  ) {
       CHECK_MEMORY_OP( webvtt_string_putc( result, **position ) );
       *token_state = TIME_STAMP_TAG;
     } else {
       switch( **position ) {
-        case UTF8_FULL_STOP:
+        case '.':
           *token_state = START_TAG_CLASS;
           break;
-        case UTF8_SOLIDUS:
+        case '/':
           *token_state = END_TAG;
           break;
-        case UTF8_GREATER_THAN:
+        case '>':
           return WEBVTT_SUCCESS;
           break;
-        case UTF8_NULL_BYTE:
+        case '\0':
           return WEBVTT_SUCCESS;
           break;
         default:
@@ -436,23 +421,20 @@ webvtt_tag_state( webvtt_byte **position, webvtt_token_state *token_state,
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_start_tag_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_start_tag_state( const char **position, webvtt_token_state *token_state, 
                         webvtt_string *result )
 {
   for( ; *token_state == START_TAG; (*position)++ ) {
-    if( **position == UTF8_TAB || **position == UTF8_FORM_FEED ||
-        **position == UTF8_SPACE || **position == UTF8_LINE_FEED ||
-        **position == UTF8_CARRIAGE_RETURN ) {
+    if( **position == '\t' || **position == '\f' ||
+        **position == ' ' || **position == '\n' ||
+        **position == '\r' ) {
       *token_state = START_TAG_ANNOTATION;
     } else {
       switch( **position ) {
-        case UTF8_TAB:
-          *token_state = START_TAG_ANNOTATION;
-          break;
-        case UTF8_FULL_STOP:
+        case '.':
           *token_state = START_TAG_CLASS;
           break;
-        case UTF8_GREATER_THAN:
+        case '>':
           return WEBVTT_SUCCESS;
           break;
         default:
@@ -466,7 +448,7 @@ webvtt_start_tag_state( webvtt_byte **position, webvtt_token_state *token_state,
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_class_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_class_state( const char **position, webvtt_token_state *token_state, 
                     webvtt_stringlist *css_classes )
 {
   webvtt_string buffer;
@@ -475,17 +457,20 @@ webvtt_class_state( webvtt_byte **position, webvtt_token_state *token_state,
   CHECK_MEMORY_OP( webvtt_create_string( 1, &buffer ) );
 
   for( ; *token_state == START_TAG_CLASS; (*position)++ ) {
-    if( **position == UTF8_TAB || **position == UTF8_FORM_FEED ||
-        **position == UTF8_SPACE || **position == UTF8_LINE_FEED ||
-        **position == UTF8_CARRIAGE_RETURN) {
-      CHECK_MEMORY_OP_JUMP( status, webvtt_stringlist_push( css_classes, &buffer ) );
+    if( **position == '\t' || **position == '\f' ||
+        **position == ' ' || **position == '\n' ||
+        **position == '\r') {
+      if( webvtt_string_length( &buffer ) > 0 ) {
+        CHECK_MEMORY_OP_JUMP( status, webvtt_stringlist_push( css_classes, &buffer ) );
+      }
       *token_state = START_TAG_ANNOTATION;
+      webvtt_release_string( &buffer );
       return WEBVTT_SUCCESS;
-    } else if( **position == UTF8_GREATER_THAN || **position == UTF8_NULL_BYTE ) {
+    } else if( **position == '>' || **position == '\0' ) {
       CHECK_MEMORY_OP_JUMP( status, webvtt_stringlist_push( css_classes, &buffer ) );
       webvtt_release_string( &buffer );
       return WEBVTT_SUCCESS;
-    } else if( **position == UTF8_FULL_STOP ) {
+    } else if( **position == '.' ) {
       CHECK_MEMORY_OP_JUMP( status, webvtt_stringlist_push( css_classes, &buffer ) );
       webvtt_release_string( &buffer );
       CHECK_MEMORY_OP( webvtt_create_string( 1, &buffer ) );
@@ -501,11 +486,11 @@ dealloc:
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_annotation_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_annotation_state( const char **position, webvtt_token_state *token_state, 
                          webvtt_string *annotation )
 {
   for( ; *token_state == START_TAG_ANNOTATION; (*position)++ ) {
-    if( **position == UTF8_NULL_BYTE || **position == UTF8_GREATER_THAN ) {
+    if( **position == '\0' || **position == '>' ) {
       return WEBVTT_SUCCESS;
     }
     CHECK_MEMORY_OP( webvtt_string_putc( annotation, **position ) );
@@ -515,11 +500,11 @@ webvtt_annotation_state( webvtt_byte **position, webvtt_token_state *token_state
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_end_tag_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_end_tag_state( const char **position, webvtt_token_state *token_state, 
                       webvtt_string *result )
 {
   for( ; *token_state == END_TAG; (*position)++ ) {
-    if( **position == UTF8_GREATER_THAN || **position == UTF8_NULL_BYTE ) {
+    if( **position == '>' || **position == '\0' ) {
       return WEBVTT_SUCCESS;
     }
     CHECK_MEMORY_OP( webvtt_string_putc( result, **position ) );
@@ -529,11 +514,11 @@ webvtt_end_tag_state( webvtt_byte **position, webvtt_token_state *token_state,
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_timestamp_state( webvtt_byte **position, webvtt_token_state *token_state, 
+webvtt_timestamp_state( const char **position, webvtt_token_state *token_state, 
                         webvtt_string *result )
 {
   for( ; *token_state == TIME_STAMP_TAG; (*position)++ ) {
-    if( **position == UTF8_GREATER_THAN || **position == UTF8_NULL_BYTE ) {
+    if( **position == '>' || **position == '\0' ) {
       return WEBVTT_SUCCESS;
     }
     CHECK_MEMORY_OP( webvtt_string_putc( result, **position ) );
@@ -547,7 +532,7 @@ webvtt_timestamp_state( webvtt_byte **position, webvtt_token_state *token_state,
  * Get a status in order to return at end and release memeory.
  */
 WEBVTT_INTERN webvtt_status
-webvtt_cuetext_tokenizer( webvtt_byte **position, webvtt_cuetext_token **token )
+webvtt_cuetext_tokenizer( const char **position, webvtt_cuetext_token **token )
 {
   webvtt_token_state token_state = DATA;
   webvtt_string result, annotation;
@@ -598,7 +583,7 @@ webvtt_cuetext_tokenizer( webvtt_byte **position, webvtt_cuetext_token **token )
     }
   }
 
-  if( **position == UTF8_GREATER_THAN )
+  if( **position == '>' )
   { (*position)++; }
   
   if( status == WEBVTT_SUCCESS ) {
@@ -645,9 +630,9 @@ WEBVTT_INTERN webvtt_status
 webvtt_parse_cuetext( webvtt_parser self, webvtt_cue *cue, webvtt_string *payload, int finished )
 {
 
-  const webvtt_byte *cue_text;
+  const char *cue_text;
   webvtt_status status;
-  webvtt_byte *position;
+  const char *position;
   webvtt_node *node_head;
   webvtt_node *current_node;
   webvtt_node *temp_node;
@@ -678,7 +663,7 @@ webvtt_parse_cuetext( webvtt_parser self, webvtt_cue *cue, webvtt_string *payloa
     return status;
   }
 
-  position = (webvtt_byte *)cue_text;
+  position = (char *)cue_text;
   node_head = cue->node_head;
   current_node = node_head;
   temp_node = NULL;
@@ -688,7 +673,7 @@ webvtt_parse_cuetext( webvtt_parser self, webvtt_cue *cue, webvtt_string *payloa
    * Routine taken from the W3C specification
    * http://dev.w3.org/html5/webvtt/#webvtt-cue-text-parsing-rules
    */
-  while( *position != UTF8_NULL_BYTE ) {
+  while( *position != '\0' ) {
     webvtt_status status = WEBVTT_SUCCESS; 
     webvtt_delete_token( &token );
 

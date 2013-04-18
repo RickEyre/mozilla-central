@@ -125,7 +125,7 @@
 #define OR
 #define AND
 
-#define OVERFLOW(X) \
+#define IF_OVERFLOW(X) \
   if( self->token_pos >= (sizeof(self->token) - 1 ) ) \
   { \
     RETURN(X) \
@@ -152,7 +152,7 @@ if(self->token_pos == sizeof(self->token) - 1 ) \
 }
 
 WEBVTT_INTERN webvtt_status
-webvtt_lex_word( webvtt_parser self, webvtt_string *str, const webvtt_byte *buffer, webvtt_uint *ppos, webvtt_uint length, webvtt_bool finish )
+webvtt_lex_word( webvtt_parser self, webvtt_string *str, const char *buffer, webvtt_uint *ppos, webvtt_uint length, webvtt_bool finish )
 {
   webvtt_status status = WEBVTT_SUCCESS;
   webvtt_uint pos = *ppos;
@@ -200,7 +200,7 @@ _finished:
  */
 WEBVTT_INTERN webvtt_token
 webvtt_lex_newline( webvtt_parser self, const
-  webvtt_byte *buffer, webvtt_uint *pos, webvtt_uint length,
+  char *buffer, webvtt_uint *pos, webvtt_uint length,
   webvtt_bool finish )
 {
   webvtt_uint p = *pos;
@@ -209,24 +209,24 @@ webvtt_lex_newline( webvtt_parser self, const
   DIE_IF( self->tstate != L_START && self->tstate != L_NEWLINE0 );
 
   while( p < length ) {
-    webvtt_byte c = buffer[ p++ ];
+    unsigned char c = (unsigned char)buffer[ p++ ];
     self->token[ self->token_pos++ ] = c;
     self->token[ self->token_pos ] = 0;
     self->bytes++;
 
     switch( self->tstate ) {
       case L_START:
-        if( c == UTF8_LINE_FEED ) {
+        if( c == '\n' ) {
           *pos = p;
           return NEWLINE;
-        } else if( c == UTF8_CARRIAGE_RETURN ) {
+        } else if( c == '\r' ) {
           self->tstate = L_NEWLINE0;
         } else {
           goto backup;
         }
         break;
       case L_NEWLINE0:
-        if( c == UTF8_LINE_FEED ) {
+        if( c == '\n' ) {
           *pos = p;
           self->tstate = L_START;
           return NEWLINE;
@@ -270,10 +270,10 @@ backup:
 }
 
 WEBVTT_INTERN webvtt_token
-webvtt_lex( webvtt_parser self, const webvtt_byte *buffer, webvtt_uint *pos, webvtt_uint length, webvtt_bool finish )
+webvtt_lex( webvtt_parser self, const char *buffer, webvtt_uint *pos, webvtt_uint length, webvtt_bool finish )
 {
   while( *pos < length ) {
-    webvtt_byte c = buffer[(*pos)++];
+    unsigned char c = (unsigned char)buffer[(*pos)++];
     self->token[ self->token_pos++ ] = c;
     self->token[ self->token_pos ] = 0;
     self->column++;
@@ -345,12 +345,12 @@ webvtt_lex( webvtt_parser self, const webvtt_byte *buffer, webvtt_uint *pos, web
 
         BEGIN_STATE(L_DIGIT0)
           U_DIGIT {
-            OVERFLOW(INTEGER)
+            IF_OVERFLOW(INTEGER)
             SET_STATE(L_DIGIT0)
           }
           U_COLON {
-            /* Don't return a TIMESTAMP if we start with UTF8_HYPHEN_MINUS */
-            if( self->token[0] == UTF8_HYPHEN_MINUS ) {
+            /* Don't return a TIMESTAMP if we start with '-' */
+            if( self->token[0] == '-' ) {
               RETURN(INTEGER);
             } else {
               SET_STATE(L_TIMESTAMP1)
@@ -366,7 +366,7 @@ webvtt_lex( webvtt_parser self, const webvtt_byte *buffer, webvtt_uint *pos, web
         END_STATE_EX
 
         BEGIN_STATE(L_WHITESPACE)
-          U_SPACE OR U_TAB { OVERFLOW(WHITESPACE) SET_STATE(L_WHITESPACE) }
+          U_SPACE OR U_TAB { IF_OVERFLOW(WHITESPACE) SET_STATE(L_WHITESPACE) }
         DEFAULT { BACKUP RETURN(WHITESPACE) }
         END_STATE_EX
 
@@ -536,33 +536,33 @@ webvtt_lex( webvtt_parser self, const webvtt_byte *buffer, webvtt_uint *pos, web
 
         BEGIN_STATE(L_TIMESTAMP1)
           U_DIGIT {
-          OVERFLOW(BADTOKEN)
+          IF_OVERFLOW(BADTOKEN)
           SET_STATE(L_TIMESTAMP1)
         }
           U_COLON {
-          OVERFLOW(BADTOKEN)
+          IF_OVERFLOW(BADTOKEN)
           SET_STATE(L_TIMESTAMP2)
         }
           U_PERIOD {
-          OVERFLOW(BADTOKEN)
+          IF_OVERFLOW(BADTOKEN)
           SET_STATE(L_TIMESTAMP3)
         }
         END_STATE
 
         BEGIN_STATE(L_TIMESTAMP2)
           U_DIGIT {
-          OVERFLOW(BADTOKEN)
+          IF_OVERFLOW(BADTOKEN)
           SET_STATE(L_TIMESTAMP2)
         }
           U_PERIOD {
-          OVERFLOW(BADTOKEN)
+          IF_OVERFLOW(BADTOKEN)
           SET_STATE(L_TIMESTAMP3)
         }
         END_STATE
 
         BEGIN_STATE(L_TIMESTAMP3)
           U_DIGIT {
-          OVERFLOW(TIMESTAMP)
+          IF_OVERFLOW(TIMESTAMP)
           BREAK
         }
         DEFAULT {

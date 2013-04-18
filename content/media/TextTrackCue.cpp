@@ -64,7 +64,8 @@ TextTrackCue::TextTrackCue(nsISupports* aGlobal,
 void
 TextTrackCue::CreateCueOverlay() 
 {
-  nsNodeInfoManager *nodeInfoManager = mTrackElement->NodeInfo()->NodeInfoManager();
+  nsNodeInfoManager *nodeInfoManager =
+    mTrackElement->NodeInfo()->NodeInfoManager();
   nsCOMPtr<nsINodeInfo> nodeInfo =
     nodeInfoManager->GetNodeInfo(nsGkAtoms::div,
                                 nullptr,
@@ -77,8 +78,8 @@ void
 TextTrackCue::RenderCue()
 {
   nsRefPtr<DocumentFragment> frag = GetCueAsHTML();
-  if (!frag.get()) {
-    // TODO: Do something with error here.
+  if (!frag) {
+    return;
   }
 
   if (!mCueDiv) {
@@ -89,49 +90,57 @@ TextTrackCue::RenderCue()
       static_cast<HTMLMediaElement*>(mTrackElement->mMediaParent.get());
 
   nsIFrame* frame = parent->GetPrimaryFrame();
-  if (frame && frame->GetType() == nsGkAtoms::HTMLVideoFrame) {
-
-    nsIContent *overlay =
-      static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
-    nsCOMPtr<nsINode> div = do_QueryInterface(overlay);
-    nsCOMPtr<nsINode> cueDiv = do_QueryInterface(mCueDiv);
-    
-    if (div) {
-      ErrorResult rv;
-
-      nsCOMPtr<nsIContent> content = do_QueryInterface(div);
-      nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
-      div->AppendChild(*cueDiv, rv);
-
-      content = do_QueryInterface(cueDiv);
-      nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
-      cueDiv->AppendChild(*frag, rv);
-    }
+  if(!frame || frame->GetType() != nsGkAtoms::HTMLVideoFrame) {
+    return;
+  }
+  
+  nsIContent *overlay = static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
+  nsCOMPtr<nsINode> div = do_QueryInterface(overlay);
+  nsCOMPtr<nsINode> cueDiv = do_QueryInterface(mCueDiv);
+  
+  if (!div || !cueDiv) {
+    return;
+  }
+  
+  ErrorResult rv;
+  nsCOMPtr<nsIContent> content = do_QueryInterface(div);
+  if (content) {
+    nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
+    div->AppendChild(*cueDiv, rv);
+  }
+  
+  content = do_QueryInterface(cueDiv);
+  if (content) {
+    nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
+    cueDiv->AppendChild(*frag, rv);
   }
 }
-  
+
 already_AddRefed<DocumentFragment>
 TextTrackCue::GetCueAsHTML()
 {
   ErrorResult rv;
   
-  // TODO: Do we need to do something with this error result?
   nsRefPtr<DocumentFragment> frag =
     mTrackElement->OwnerDoc()->CreateDocumentFragment(rv);
-    
-  // TODO: Should this happen?
-  if (!frag.get()) {
+  if (rv.Failed()) {
     return nullptr;
   }
   
   for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {    
-    nsCOMPtr<nsIContent> cueTextContent = 
-      ConvertNodeToCueTextContent(mHead->data.internal_data->children[i]);
+    nsCOMPtr<nsIContent> cueTextContent = ConvertNodeToCueTextContent(
+                                  mHead->data.internal_data->children[i]);
+    if (!cueTextContent) {
+      return nullptr;
+    }
     
-    // TODO: Get rid of nsIDOMNode stuff. Ambiguous error if try to cast to nsINode.
-    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(cueTextContent);
-    nsCOMPtr<nsIDOMNode> result;
-    frag->AppendChild(node, getter_AddRefs(result));
+    nsCOMPtr<nsINode> contentNode = do_QueryInterface(cueTextContent);
+    if (!contentNode) {
+      return nullptr;
+    }
+    
+    nsINode *fragNode = frag;
+    fragNode->AppendChild(*contentNode, rv);
   }
 
   return frag.forget();
@@ -142,7 +151,6 @@ nsCOMPtr<nsIContent>
 TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
 {
   nsCOMPtr<nsIContent> cueTextContent;
-  nsCOMPtr<nsINodeInfo> nodeInfo;
   nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
   
   if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVTTNode->kind))
@@ -173,12 +181,13 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         break;
       }
       default:
-        // TODO: What happens here?
-        cueTextContent = nullptr;
+        return nullptr;
         break;
     }
-    nodeInfo = nimgr->GetNodeInfo(atomName, nullptr, kNameSpaceID_XHTML,
-                                  nsIDOMNode::ELEMENT_NODE);
+    nsCOMPtr<nsINodeInfo> nodeInfo =
+                          nimgr->GetNodeInfo(atomName, nullptr,
+                                             kNameSpaceID_XHTML,
+                                             nsIDOMNode::ELEMENT_NODE);
     
     NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo.forget(),
                       mozilla::dom::NOT_FROM_PARSER);
@@ -187,29 +196,32 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
       nsCOMPtr<nsGenericHTMLElement> genericHtmlElement =
         do_QueryInterface(cueTextContent);
       
-      const char* text = reinterpret_cast<const char *>(
-          webvtt_string_text(&aWebVTTNode->data.internal_data->annotation));
-      
-      genericHtmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
+      if (genericHtmlElement) {
+        const char* text =
+            webvtt_string_text(&aWebVTTNode->data.internal_data->annotation);
+        genericHtmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
+      }
     }
     
-    webvtt_stringlist *cssClasses = aWebVTTNode->data.internal_data->css_classes;
-    
-    if (cssClasses->length > 0) {
-      nsAutoString classes;
+    webvtt_stringlist *classes = aWebVTTNode->data.internal_data->css_classes;
+    if (classes && classes->length > 0) {
+      nsAutoString classString;
       const char *text;
   
-      text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses->items));
-      classes.Append(NS_ConvertUTF8toUTF16(text));
-      
-      for (webvtt_uint i = 1; i < cssClasses->length; i++) {
-        classes.Append(NS_LITERAL_STRING(" "));
-        text = reinterpret_cast<const char *>(webvtt_string_text(cssClasses->items + i));
-        classes.Append(NS_ConvertUTF8toUTF16(text));
+      text = webvtt_string_text(classes->items);
+      classString.Append(NS_ConvertUTF8toUTF16(text));
+
+      for (webvtt_uint i = 1; i < classes->length; i++) {      
+        classString.Append(NS_LITERAL_STRING(" "));
+        text = webvtt_string_text(classes->items + i);
+        classString.Append(NS_ConvertUTF8toUTF16(text));
       }
       
-      nsCOMPtr<nsIDOMHTMLElement> htmlElement = do_QueryInterface(cueTextContent);
-      htmlElement->SetClassName(classes);
+      nsCOMPtr<nsGenericHTMLElement> genericHtmlElement =
+        do_QueryInterface(cueTextContent);
+      if (genericHtmlElement) {
+        genericHtmlElement->SetClassName(classString);
+      }
     }
 
     ErrorResult rv;
@@ -217,9 +229,13 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
       nsCOMPtr<nsIContent> childCueTextContent = ConvertNodeToCueTextContent(
         aWebVTTNode->data.internal_data->children[i]);
       
-      nsCOMPtr<nsINode> childNode = do_QueryInterface(childCueTextContent); 
-      nsCOMPtr<nsINode> htmlElement = do_QueryInterface(cueTextContent);  
-      htmlElement->AppendChild(*childNode, rv);
+      if (childCueTextContent) {
+        nsCOMPtr<nsINode> childNode = do_QueryInterface(childCueTextContent);
+        nsCOMPtr<nsINode> htmlElement = do_QueryInterface(cueTextContent);
+        if (childNode && htmlElement) {
+          htmlElement->AppendChild(*childNode, rv);
+        }
+      }
     }
   }
   else if (WEBVTT_IS_VALID_LEAF_NODE(aWebVTTNode->kind))
@@ -233,11 +249,8 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
           return nullptr;
         }
   
-        const char* text = reinterpret_cast<const char *>(
-          webvtt_string_text(&aWebVTTNode->data.text));
-
+        const char* text = webvtt_string_text(&aWebVTTNode->data.text);
         cueTextContent->SetText(NS_ConvertUTF8toUTF16(text), false);
-  
         break;
       }
       case WEBVTT_TIME_STAMP:
@@ -245,14 +258,13 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         nsAutoString timeStamp;
         timeStamp.AppendInt(aWebVTTNode->data.timestamp);
         NS_NewXMLProcessingInstruction(getter_AddRefs(cueTextContent),
-                                       nodeInfo->NodeInfoManager(),
+                                       nimgr,
                                        NS_LITERAL_STRING("timestamp"),
                                        timeStamp);
         break;
       }
       default:
-        // TODO: What happens here?
-        cueTextContent = nullptr;
+        return nullptr;
         break;
     }
   }
