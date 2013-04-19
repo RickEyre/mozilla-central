@@ -92,6 +92,7 @@ public:
   IMPL_EVENT_HANDLER(cuechange)
 
 private:
+  bool DoesContainCue(TextTrackCue& aCue);
   nsCOMPtr<nsISupports> mParent;
 
   nsString mKind;

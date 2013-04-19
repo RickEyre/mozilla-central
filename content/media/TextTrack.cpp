@@ -67,8 +67,31 @@ void
 TextTrack::AddCue(TextTrackCue& aCue,
                   ErrorResult& aRv)
 {
-  //XXX: if cue exists, remove
+  // TODO
+  // If the text track list of cues does not yet have any associated rules for
+  // updating the text track rendering, then associate the text track list of
+  // cues with the rules for updating the text track rendering appropriate to
+  // cue.
+
+  // TODO
+  // If text track list of cues' associated rules for updating the text track
+  // rendering are not the same rules for updating the text track rendering as
+  // appropriate for cue, then throw an InvalidStateError exception and abort
+  // these steps.
+
+  // If the given cue is in a text track list of cues, then remove cue from
+  // that text track list of cues.
+  if( DoesContainCue(aCue) == true){
+    RemoveCue(aCue, aRv);
+  }
+
+  // Add cue to the method's TextTrack object's text track's text track list
+  // of cues.
   mCueList->AddCue(aCue);
+
+  // TODO
+  // If the TextTrack object's text track is in a media element's list of text
+  // tracks, run the time marches on steps for that media element.
 }
 
 void
@@ -79,11 +102,7 @@ TextTrack::RemoveCue(TextTrackCue& aCue,
   // method's TextTrack object's text track's text
   // track list of cues, then throw a NotFoundError
   // exception and abort these steps.
-  nsString cueId;
-  aCue.GetId(cueId);
-
-  TextTrackCue* cue = mCueList->GetCueById(cueId);
-  if(cue == nullptr) {
+  if( DoesContainCue(aCue) == false ) {
     aRv.Throw(NS_ERROR_DOM_NOT_FOUND_ERR);
     return;
   }
@@ -97,6 +116,19 @@ void
 TextTrack::CueChanged(TextTrackCue& aCue)
 {
   //XXX: cue changed handling
+}
+
+bool
+TextTrack::DoesContainCue(TextTrackCue& aCue)
+{
+  nsString cueId;
+  aCue.GetId(cueId);
+
+  TextTrackCue* cue = mCueList->GetCueById(cueId);
+  if(cue == nullptr) {
+    return false;
+  }
+  return true;
 }
 
 } // namespace dom
