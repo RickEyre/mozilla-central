@@ -83,8 +83,10 @@ public:
 
   void Update(double time);
 
-  void AddCue(TextTrackCue& aCue);
-  void RemoveCue(TextTrackCue& aCue);
+  void AddCue(TextTrackCue& aCue,
+              ErrorResult& aRv);
+  void RemoveCue(TextTrackCue& aCue,
+                 ErrorResult& aRv);
   void CueChanged(TextTrackCue& aCue);
 
   IMPL_EVENT_HANDLER(cuechange)

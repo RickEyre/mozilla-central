@@ -64,17 +64,32 @@ TextTrack::SetMode(TextTrackMode aValue)
 }
 
 void
-TextTrack::AddCue(TextTrackCue& aCue)
+TextTrack::AddCue(TextTrackCue& aCue,
+                  ErrorResult& aRv)
 {
   //XXX: if cue exists, remove
   mCueList->AddCue(aCue);
 }
 
 void
-TextTrack::RemoveCue(TextTrackCue& aCue)
+TextTrack::RemoveCue(TextTrackCue& aCue,
+                     ErrorResult& aRv)
 {
-  //XXX: if cue does not exists throw
-  //a NotFoundError exception
+  // If the given cue is not currently listed in the
+  // method's TextTrack object's text track's text
+  // track list of cues, then throw a NotFoundError
+  // exception and abort these steps.
+  nsString cueId;
+  aCue.GetId(cueId);
+
+  TextTrackCue* cue = mCueList->GetCueById(cueId);
+  if(cue == nullptr) {
+    aRv.Throw(NS_ERROR_DOM_NOT_FOUND_ERR);
+    return;
+  }
+
+  // Remove cue from the method's TextTrack object's text track's text track
+  // list of cues.
   mCueList->RemoveCue(aCue);
 }
 
