@@ -25,7 +25,9 @@ interface TextTrack : EventTarget {
   readonly attribute TextTrackCueList? cues;
   readonly attribute TextTrackCueList? activeCues;
 
+  [Throws]
   void addCue(TextTrackCue cue);
+  [Throws]
   void removeCue(TextTrackCue cue);
 
   [SetterThrows]
