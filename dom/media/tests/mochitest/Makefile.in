@@ -37,9 +37,7 @@ MOCHITEST_FILES = \
   test_peerConnection_bug835370.html \
   test_peerConnection_bug840344.html \
   test_HTMLTrackElement_Reflect.html \
-  test_TextTrackList_getter.html \
-  test_TextTrackList_length.html \
-  test_TextTrackList_lengthChanged.html \
+  test_TextTrackList.html \
   basic.vtt \
   fast.vtt \
   head.js \
