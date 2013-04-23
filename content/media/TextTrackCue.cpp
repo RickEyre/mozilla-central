@@ -62,7 +62,7 @@ TextTrackCue::TextTrackCue(nsISupports* aGlobal,
 }
 
 void
-TextTrackCue::CreateCueOverlay() 
+TextTrackCue::CreateCueOverlay()
 {
   nsNodeInfoManager *nodeInfoManager =
     mTrackElement->NodeInfo()->NodeInfoManager();
@@ -93,22 +93,22 @@ TextTrackCue::RenderCue()
   if(!frame || frame->GetType() != nsGkAtoms::HTMLVideoFrame) {
     return;
   }
-  
+
   nsIContent *overlay = static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
   nsCOMPtr<nsINode> div = do_QueryInterface(overlay);
   nsCOMPtr<nsINode> cueDiv = do_QueryInterface(mCueDiv);
-  
+
   if (!div || !cueDiv) {
     return;
   }
-  
+
   ErrorResult rv;
   nsCOMPtr<nsIContent> content = do_QueryInterface(div);
   if (content) {
     nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
     div->AppendChild(*cueDiv, rv);
   }
-  
+
   content = do_QueryInterface(cueDiv);
   if (content) {
     nsContentUtils::SetNodeTextContent(content, EmptyString(), true);
@@ -120,25 +120,25 @@ already_AddRefed<DocumentFragment>
 TextTrackCue::GetCueAsHTML()
 {
   ErrorResult rv;
-  
+
   nsRefPtr<DocumentFragment> frag =
     mTrackElement->OwnerDoc()->CreateDocumentFragment(rv);
   if (rv.Failed()) {
     return nullptr;
   }
-  
-  for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {    
+
+  for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {
     nsCOMPtr<nsIContent> cueTextContent = ConvertNodeToCueTextContent(
                                   mHead->data.internal_data->children[i]);
     if (!cueTextContent) {
       return nullptr;
     }
-    
+
     nsCOMPtr<nsINode> contentNode = do_QueryInterface(cueTextContent);
     if (!contentNode) {
       return nullptr;
     }
-    
+
     nsINode *fragNode = frag;
     fragNode->AppendChild(*contentNode, rv);
   }
@@ -152,7 +152,7 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
 {
   nsCOMPtr<nsIContent> cueTextContent;
   nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
-  
+
   if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVTTNode->kind))
   {
     nsIAtom *atomName;
@@ -188,35 +188,35 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
                           nimgr->GetNodeInfo(atomName, nullptr,
                                              kNameSpaceID_XHTML,
                                              nsIDOMNode::ELEMENT_NODE);
-    
+
     NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo.forget(),
                       mozilla::dom::NOT_FROM_PARSER);
-    
+
     if (aWebVTTNode->kind == WEBVTT_VOICE) {
       nsCOMPtr<nsGenericHTMLElement> genericHtmlElement =
         do_QueryInterface(cueTextContent);
-      
+
       if (genericHtmlElement) {
         const char* text =
             webvtt_string_text(&aWebVTTNode->data.internal_data->annotation);
         genericHtmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
       }
     }
-    
+
     webvtt_stringlist *classes = aWebVTTNode->data.internal_data->css_classes;
     if (classes && classes->length > 0) {
       nsAutoString classString;
       const char *text;
-  
+
       text = webvtt_string_text(classes->items);
       classString.Append(NS_ConvertUTF8toUTF16(text));
 
-      for (webvtt_uint i = 1; i < classes->length; i++) {      
+      for (webvtt_uint i = 1; i < classes->length; i++) {
         classString.Append(NS_LITERAL_STRING(" "));
         text = webvtt_string_text(classes->items + i);
         classString.Append(NS_ConvertUTF8toUTF16(text));
       }
-      
+
       nsCOMPtr<nsGenericHTMLElement> genericHtmlElement =
         do_QueryInterface(cueTextContent);
       if (genericHtmlElement) {
@@ -225,10 +225,10 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
     }
 
     ErrorResult rv;
-    for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {   
+    for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {
       nsCOMPtr<nsIContent> childCueTextContent = ConvertNodeToCueTextContent(
         aWebVTTNode->data.internal_data->children[i]);
-      
+
       if (childCueTextContent) {
         nsCOMPtr<nsINode> childNode = do_QueryInterface(childCueTextContent);
         nsCOMPtr<nsINode> htmlElement = do_QueryInterface(cueTextContent);
@@ -248,7 +248,7 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         if (!cueTextContent) {
           return nullptr;
         }
-  
+
         const char* text = webvtt_string_text(&aWebVTTNode->data.text);
         cueTextContent->SetText(NS_ConvertUTF8toUTF16(text), false);
         break;

@@ -163,7 +163,7 @@ WebVTTLoadListener::ParseChunk(nsIInputStream *aInStream, void *aClosure,
   WebVTTLoadListener* loadListener = static_cast<WebVTTLoadListener *>(aClosure);
 
   if (!webvtt_parse_chunk(loadListener->mParser, aFromSegment, aCount)) {
-    // TODO: Handle error
+    LOG("UNABLE TO PARSE CHUNK OF WEBVTT TEXT.");
   }
   *aWriteCount = aCount;
 
@@ -173,12 +173,13 @@ WebVTTLoadListener::ParseChunk(nsIInputStream *aInStream, void *aClosure,
 void
 WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue)
 {
-  const char* text = reinterpret_cast<const char *>(webvtt_string_text(&aCue->id));
+  const char* text = webvtt_string_text(&aCue->id);
 
-  nsRefPtr<TextTrackCue> textTrackCue = new TextTrackCue(mElement->OwnerDoc()->GetParentObject(),
-                                                         (double)(aCue->from/1000), (double)(aCue->until/1000),
-                                                         NS_ConvertUTF8toUTF16(text), mElement,
-                                                         aCue->node_head);
+  nsRefPtr<TextTrackCue> textTrackCue =
+      new TextTrackCue(mElement->OwnerDoc()->GetParentObject(),
+                       (double)(aCue->from/1000), (double)(aCue->until/1000),
+                       NS_ConvertUTF8toUTF16(text), mElement,
+                       aCue->node_head);
 
   textTrackCue->SetSnapToLines(aCue->snap_to_lines);
   textTrackCue->SetSize(aCue->settings.size);

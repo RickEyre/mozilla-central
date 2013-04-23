@@ -226,9 +226,32 @@ public:
     return (mId.Equals(rhs.mId));
   }
 
+  /**
+   * Converts the TextTrackCue's cuetext into a tree of DOM objects and attaches
+   * it to a div on it's owning TrackElement's MediaElement's caption overlay.
+   */
   void RenderCue();
+
+  /**
+   * Produces a tree of anonymous content based on the tree structure of
+   * aWebVTTNode. aWebVTTNode is the head node of a list of webvtt_nodes that
+   * the WebVTTLoadListener has parsed from the WEBVTT file.
+   *
+   * Rules on constructing DOM objects from webvtt_nodes can be found here
+   * http://dev.w3.org/html5/webvtt/#webvtt-cue-text-dom-construction-rules.
+   * Current rules are taken from revision on April 15, 2013.
+   *
+   * Returns a DocumentFragment that is the head of a tree of HTMLElements,
+   * TextNodes, and/or XMLProcessingInstructions.
+   */
   already_AddRefed<DocumentFragment> GetCueAsHTML();
-  nsCOMPtr<nsIContent> ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode);
+
+  /**
+   * Actually converts the webvtt_node to the appropriate DOM object specified
+   * in the above URL.
+   */
+  nsCOMPtr<nsIContent>
+  ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode);
 
   IMPL_EVENT_HANDLER(enter)
   IMPL_EVENT_HANDLER(exit)
