@@ -194,7 +194,8 @@ WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue)
   // TODO: Not specified in webvtt so we may not need this.
   // textTrackCue.SetPauseOnExit();
 
-  mElement->mTrack->AddCue(*textTrackCue.get());
+  ErrorResult aRv;
+  mElement->mTrack->AddCue(*textTrackCue.get(), aRv);
   textTrackCue.forget();
 }
 
