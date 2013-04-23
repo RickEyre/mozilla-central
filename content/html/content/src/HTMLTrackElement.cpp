@@ -115,6 +115,17 @@ HTMLTrackElement::Track()
 }
 
 nsresult
+HTMLTrackElement::OnChannelRedirect(nsIChannel* aChannel,
+                                    nsIChannel* aNewChannel,
+                                    uint32_t aFlags)
+{
+  NS_ASSERTION(aChannel == mChannel, "Channels should match!");
+  mChannel = aNewChannel;
+
+  return NS_OK;
+}
+
+nsresult
 HTMLTrackElement::SetAcceptHeader(nsIHttpChannel* aChannel)
 {
   if (IsWebVTTEnabled()) {

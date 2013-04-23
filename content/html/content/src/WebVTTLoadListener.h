@@ -53,12 +53,12 @@ private:
   nsCOMPtr<nsIStreamListener> mNextListener;
   uint32_t mLoadID;
   nsAutoRef<webvtt_parser_t> mParser;
-  
-  static void WEBVTT_CALLBACK OnParsedCueWebVTTCallBack(void *aUserData, 
+
+  static void WEBVTT_CALLBACK OnParsedCueWebVTTCallBack(void *aUserData,
                                                       webvtt_cue *aCue);
-  static int WEBVTT_CALLBACK OnReportErrorWebVTTCallBack(void *aUserData, 
-                                                       uint32_t aLine, 
-                                                       uint32_t aCol, 
+  static int WEBVTT_CALLBACK OnReportErrorWebVTTCallBack(void *aUserData,
+                                                       uint32_t aLine,
+                                                       uint32_t aCol,
                                                        webvtt_error aError);
 };
 

@@ -132,6 +132,8 @@ public:
 
 protected:
   virtual JSObject* WrapNode(JSContext* aCx, JSObject* aScope) MOZ_OVERRIDE;
+  nsresult OnChannelRedirect(nsIChannel* aChannel, nsIChannel* aNewChannel,
+                             uint32_t aFlags);
 
   friend class WebVTTLoadListener;
   friend class TextTrackCue;

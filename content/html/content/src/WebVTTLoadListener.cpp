@@ -4,10 +4,12 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "WebVTTLoadListener.h"
+#include "mozilla/dom/HTMLMediaElement.h"
 #include "mozilla/dom/HTMLTrackElement.h"
 #include "mozilla/dom/TextTrack.h"
 #include "mozilla/dom/TextTrackCue.h"
 #include "mozilla/dom/TextTrackCueList.h"
+#include "nsIAsyncVerifyRedirectCallback.h"
 
 namespace mozilla {
 namespace dom {
@@ -57,8 +59,8 @@ WebVTTLoadListener::LoadResource()
   }
 
   LOG("Loading text track resource.");
-  status = webvtt_create_parser(&OnParsedCueWebVTTCallBack, 
-                                &OnReportErrorWebVTTCallBack, 
+  status = webvtt_create_parser(&OnParsedCueWebVTTCallBack,
+                                &OnReportErrorWebVTTCallBack,
                                 this, &parser);
 
   if (status != WEBVTT_SUCCESS) {
@@ -85,7 +87,7 @@ WebVTTLoadListener::Observe(nsISupports* aSubject,
   if (strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
     nsContentUtils::UnregisterShutdownObserver(this);
   }
- 
+
   // Clear mElement to break cycle so we don't leak on shutdown
   mElement = nullptr;
   return NS_OK;
@@ -134,6 +136,15 @@ WebVTTLoadListener::AsyncOnChannelRedirect(nsIChannel* aOldChannel,
                                            uint32_t aFlags,
                                            nsIAsyncVerifyRedirectCallback* cb)
 {
+  if (mElement) {
+    mElement->OnChannelRedirect(aOldChannel, aNewChannel, aFlags);
+  }
+
+  nsCOMPtr<nsIChannelEventSink> sink = do_QueryInterface(mNextListener);
+  if (sink)
+    return sink->AsyncOnChannelRedirect(aOldChannel, aNewChannel, aFlags, cb);
+
+  cb->OnRedirectVerifyCallback(NS_OK);
   return NS_OK;
 }
 
@@ -144,13 +155,13 @@ WebVTTLoadListener::GetInterface(const nsIID &aIID,
   return QueryInterface(aIID, aResult);
 }
 
-NS_METHOD 
+NS_METHOD
 WebVTTLoadListener::ParseChunk(nsIInputStream *aInStream, void *aClosure,
                                const char *aFromSegment, uint32_t aToOffset,
                                uint32_t aCount, uint32_t *aWriteCount)
 {
   WebVTTLoadListener* loadListener = static_cast<WebVTTLoadListener *>(aClosure);
-  
+
   if (!webvtt_parse_chunk(loadListener->mParser, aFromSegment, aCount)) {
     // TODO: Handle error
   }
@@ -187,8 +198,8 @@ WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue)
   textTrackCue.forget();
 }
 
-void 
-WebVTTLoadListener::OnReportError(uint32_t aLine, uint32_t aCol, 
+void
+WebVTTLoadListener::OnReportError(uint32_t aLine, uint32_t aCol,
                                   webvtt_error aError)
 {
 }
@@ -200,8 +211,8 @@ WebVTTLoadListener::OnParsedCueWebVTTCallBack(void *aUserData, webvtt_cue *aCue)
   self->OnParsedCue(aCue);
 }
 
-int WEBVTT_CALLBACK 
-WebVTTLoadListener::OnReportErrorWebVTTCallBack(void *aUserData, uint32_t aLine, 
+int WEBVTT_CALLBACK
+WebVTTLoadListener::OnReportErrorWebVTTCallBack(void *aUserData, uint32_t aLine,
                             uint32_t aCol, webvtt_error aError)
 {
   WebVTTLoadListener *self = reinterpret_cast<WebVTTLoadListener *>(aUserData);
