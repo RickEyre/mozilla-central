@@ -173,30 +173,28 @@ WebVTTLoadListener::ParseChunk(nsIInputStream *aInStream, void *aClosure,
 void
 WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue)
 {
-  const char* text = webvtt_string_text(&aCue->id);
+  const char* text = webvtt_string_text(&aCue->body);
 
   nsRefPtr<TextTrackCue> textTrackCue =
       new TextTrackCue(mElement->OwnerDoc()->GetParentObject(),
                        (double)(aCue->from/1000), (double)(aCue->until/1000),
                        NS_ConvertUTF8toUTF16(text), mElement,
                        aCue->node_head);
+  
+  text = webvtt_string_text(&aCue->id);
+  textTrackCue->SetId(NS_ConvertUTF8toUTF16(text));
 
   textTrackCue->SetSnapToLines(aCue->snap_to_lines);
   textTrackCue->SetSize(aCue->settings.size);
   textTrackCue->SetPosition(aCue->settings.position);
-
+  textTrackCue->SetLine(aCue->settings.line);
+  
   //TODO: need to convert webvtt enums to strings
   // textTrackCue.SetVertical();
   // textTrackCue.SetAlign();
 
-  // TODO: Id is the text in the parser so do we need this?
-  // textTrackCue.SetId();
-
-  // TODO: Not specified in webvtt so we may not need this.
-  // textTrackCue.SetPauseOnExit();
-
-  ErrorResult aRv;
-  mElement->mTrack->AddCue(*textTrackCue.get(), aRv);
+  ErrorResult rv;
+  mElement->mTrack->AddCue(*textTrackCue.get(), rv);
   textTrackCue.forget();
 }
 

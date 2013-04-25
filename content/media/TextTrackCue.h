@@ -43,6 +43,7 @@ public:
                                                     aEndTime, aText);
     return ttcue.forget();
   }
+  
   TextTrackCue(nsISupports* aGlobal, const double aStartTime,
                const double aEndTime, const nsAString& aText);
 
