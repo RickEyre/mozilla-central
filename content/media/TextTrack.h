@@ -42,21 +42,21 @@ public:
     return mParent;
   }
 
-  void GetKind(nsAString& aKind) const
+  void GetKind(DOMString& aKind) const
   {
-    aKind = mKind;
+    aKind.SetStringBuffer( nsStringBuffer::FromString(mKind), mKind.Length() );
   }
-  void GetLabel(nsAString& aLabel) const
+  void GetLabel(DOMString& aLabel) const
   {
-    aLabel = mLabel;
+    aLabel.SetStringBuffer( nsStringBuffer::FromString(mLabel), mLabel.Length() );
   }
-  void GetLanguage(nsAString& aLanguage) const
+  void GetLanguage(DOMString& aLanguage) const
   {
-    aLanguage = mLanguage;
+    aLanguage.SetStringBuffer( nsStringBuffer::FromString(mLanguage), mLanguage.Length() );
   }
-  void GetInBandMetadataTrackDispatchType(nsAString& aType) const
+  void GetInBandMetadataTrackDispatchType(DOMString& aType) const
   {
-    aType = mType;
+    aType.SetStringBuffer( nsStringBuffer::FromString(mType), mType.Length() );
   }
 
   TextTrackMode Mode() const

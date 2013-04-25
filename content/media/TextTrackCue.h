@@ -62,9 +62,9 @@ public:
     return mTrack;
   }
 
-  void GetId(nsAString& aId) const
+  void GetId(DOMString& aId) const
   {
-    aId = mId;
+    aId.SetStringBuffer( nsStringBuffer::FromString(mId), mId.Length() );
   }
 
   void SetId(const nsAString& aId)
@@ -121,9 +121,9 @@ public:
     CueChanged();
   }
 
-  void GetVertical(nsAString& aVertical)
+  void GetVertical(DOMString& aVertical)
   {
-    aVertical = mVertical;
+    aVertical.SetStringBuffer( nsStringBuffer::FromString(mVertical), mVertical.Length() );
   }
 
   void SetVertical(const nsAString& aVertical)
@@ -205,9 +205,9 @@ public:
     CueChanged();
   }
 
-  void GetText(nsAString& aText) const
+  void GetText(DOMString& aText) const
   {
-    aText = mText;
+    aText.SetStringBuffer( nsStringBuffer::FromString(mText), mText.Length() );
   }
 
   void SetText(const nsAString& aText)
