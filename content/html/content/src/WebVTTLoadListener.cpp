@@ -191,7 +191,7 @@ WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue)
       vertical = NS_LITERAL_STRING("lr");
       break;
     case WEBVTT_VERTICAL_RL:
-       vertical = NS_LITERAL_STRING("lr");
+       vertical = NS_LITERAL_STRING("rl");
        break;
     default:
       vertical = EmptyString();
