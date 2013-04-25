@@ -204,6 +204,14 @@ void
 WebVTTLoadListener::OnReportError(uint32_t aLine, uint32_t aCol,
                                   webvtt_error aError)
 {
+  // Get source webvtt file to display in the log
+  nsAutoString tmp;
+  mElement->GetSrc(tmp);
+  nsAutoCString file = NS_ConvertUTF16toUTF8(tmp);
+  const char *error = "parser error";
+  if( aError >= 0 )
+    error = webvtt_strerror(aError);
+  LOG(("error: %s(%d:%d) - %s\n", file.get(), aLine, aCol, error));
 }
 
 void WEBVTT_CALLBACK
