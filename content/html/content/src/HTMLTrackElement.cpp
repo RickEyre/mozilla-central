@@ -35,6 +35,7 @@
 #include "nsThreadUtils.h"
 #include "nsVideoFrame.h"
 #include "WebVTTLoadListener.h"
+#include "nsCycleCollectionParticipant.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gTrackElementLog;
@@ -78,17 +79,22 @@ HTMLTrackElement::~HTMLTrackElement()
 {
 }
 
+NS_IMPL_ELEMENT_CLONE(HTMLTrackElement)
+
 NS_IMPL_ADDREF_INHERITED(HTMLTrackElement, Element)
 NS_IMPL_RELEASE_INHERITED(HTMLTrackElement, Element)
 
-NS_INTERFACE_TABLE_HEAD(HTMLTrackElement)
-  NS_HTML_CONTENT_INTERFACE_TABLE1(HTMLTrackElement,
-                                   nsIDOMHTMLElement)
-  NS_HTML_CONTENT_INTERFACE_TABLE_TO_MAP_SEGUE(HTMLTrackElement,
-                                               nsGenericHTMLElement)
-NS_HTML_CONTENT_INTERFACE_MAP_END
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(HTMLTrackElement, nsGenericHTMLElement)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mLoadListener)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
-NS_IMPL_ELEMENT_CLONE(HTMLTrackElement)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(HTMLTrackElement, nsGenericHTMLElement)
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mLoadListener)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_END
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(HTMLTrackElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLElement)
+NS_INTERFACE_MAP_END_INHERITING(nsGenericHTMLElement)
 
 JSObject*
 HTMLTrackElement::WrapNode(JSContext* aCx, JSObject* aScope)

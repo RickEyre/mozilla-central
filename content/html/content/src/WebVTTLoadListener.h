@@ -14,6 +14,7 @@
 #include "webvtt/parser.h"
 #include "webvtt/util.h"
 #include "nsAutoRef.h"
+#include "nsCycleCollectionParticipant.h"
 
 template <>
 class nsAutoRefTraits<webvtt_parser_t> : public nsPointerRefTraits<webvtt_parser_t>
@@ -30,13 +31,16 @@ class WebVTTLoadListener MOZ_FINAL : public nsIStreamListener,
                                      public nsIInterfaceRequestor,
                                      public nsIObserver
 {
-  NS_DECL_ISUPPORTS
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSICHANNELEVENTSINK
   NS_DECL_NSIOBSERVER
   NS_DECL_NSIINTERFACEREQUESTOR
 
+  NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(WebVTTLoadListener,
+                                           nsIStreamListener)
+  
 public:
   WebVTTLoadListener(HTMLTrackElement *aElement);
   ~WebVTTLoadListener();

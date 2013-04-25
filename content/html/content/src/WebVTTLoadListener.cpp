@@ -10,16 +10,24 @@
 namespace mozilla {
 namespace dom {
 
+NS_IMPL_CYCLE_COLLECTION_2(WebVTTLoadListener, mElement, mNextListener)
+
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(WebVTTLoadListener)
+  NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
+  NS_INTERFACE_MAP_ENTRY(nsIChannelEventSink)
+  NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
+  NS_INTERFACE_MAP_ENTRY(nsIObserver)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_CYCLE_COLLECTING_ADDREF(WebVTTLoadListener)
+NS_IMPL_CYCLE_COLLECTING_RELEASE(WebVTTLoadListener)
+
 #ifdef PR_LOGGING
 PRLogModuleInfo* gTextTrackLog;
 # define LOG(msg) PR_LOG(gTextTrackLog, PR_LOG_DEBUG, (msg))
 #else
 # define LOG(msg)
 #endif
-
-NS_IMPL_ISUPPORTS5(WebVTTLoadListener, nsIRequestObserver,
-                   nsIStreamListener, nsIChannelEventSink,
-                   nsIInterfaceRequestor, nsIObserver)
 
 WebVTTLoadListener::WebVTTLoadListener(HTMLTrackElement *aElement)
   : mElement(aElement),
@@ -84,8 +92,6 @@ WebVTTLoadListener::Observe(nsISupports* aSubject,
     nsContentUtils::UnregisterShutdownObserver(this);
   }
 
-  // Clear mElement to break cycle so we don't leak on shutdown
-  mElement = nullptr;
   return NS_OK;
 }
 
