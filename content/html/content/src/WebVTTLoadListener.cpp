@@ -4,11 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "WebVTTLoadListener.h"
-#include "mozilla/dom/HTMLMediaElement.h"
-#include "mozilla/dom/HTMLTrackElement.h"
-#include "mozilla/dom/TextTrack.h"
 #include "mozilla/dom/TextTrackCue.h"
-#include "mozilla/dom/TextTrackCueList.h"
 #include "nsIAsyncVerifyRedirectCallback.h"
 
 namespace mozilla {
@@ -189,9 +185,40 @@ WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue)
   textTrackCue->SetPosition(aCue->settings.position);
   textTrackCue->SetLine(aCue->settings.line);
   
-  //TODO: need to convert webvtt enums to strings
-  // textTrackCue.SetVertical();
-  // textTrackCue.SetAlign();
+  nsAutoString vertical;
+  switch (aCue->settings.vertical) {
+    case WEBVTT_VERTICAL_LR:
+      vertical = NS_LITERAL_STRING("lr");
+      break;
+    case WEBVTT_VERTICAL_RL:
+       vertical = NS_LITERAL_STRING("lr");
+       break;
+    default:
+      vertical = EmptyString();
+      break;
+  }
+  textTrackCue->SetVertical(vertical);
+  
+  TextTrackCueAlign align;
+  switch (aCue->settings.align) {
+    case WEBVTT_ALIGN_START:
+      align = TextTrackCueAlign::Start;
+      break;
+    case WEBVTT_ALIGN_MIDDLE:
+      align = TextTrackCueAlign::Middle;
+    case WEBVTT_ALIGN_END:
+      align = TextTrackCueAlign::End;
+    case WEBVTT_ALIGN_LEFT:
+      align = TextTrackCueAlign::Left;
+      break;
+    case WEBVTT_ALIGN_RIGHT:
+      align = TextTrackCueAlign::Right;
+      break;
+    default:
+      align = TextTrackCueAlign::Start;
+      break;
+  }
+  textTrackCue->SetAlign(align);
 
   ErrorResult rv;
   mElement->mTrack->AddCue(*textTrackCue.get(), rv);
