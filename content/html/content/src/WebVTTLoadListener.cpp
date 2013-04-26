@@ -108,6 +108,9 @@ WebVTTLoadListener::OnStopRequest(nsIRequest* aRequest,
                                   nsresult aStatus)
 {
   nsContentUtils::UnregisterShutdownObserver(this);
+  
+  webvtt_finish_parsing( mParser );
+  
   return NS_OK;
 }
 
