@@ -38,6 +38,7 @@ MOCHITEST_FILES = \
   test_peerConnection_bug840344.html \
   test_HTMLTrackElement_Reflect.html \
   test_TextTrackList.html \
+  test_TextTrackCue.html \
   basic.vtt \
   fast.vtt \
   head.js \
