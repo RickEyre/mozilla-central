@@ -6,17 +6,19 @@
 #include "WebVTTLoadListener.h"
 #include "mozilla/dom/TextTrackCue.h"
 #include "nsIAsyncVerifyRedirectCallback.h"
+#include "VideoUtils.h"
 
 namespace mozilla {
 namespace dom {
 
-NS_IMPL_CYCLE_COLLECTION_2(WebVTTLoadListener, mElement, mNextListener)
+NS_IMPL_CYCLE_COLLECTION_1(WebVTTLoadListener, mElement)
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(WebVTTLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
   NS_INTERFACE_MAP_ENTRY(nsIChannelEventSink)
   NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
   NS_INTERFACE_MAP_ENTRY(nsIObserver)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIStreamListener)
 NS_INTERFACE_MAP_END
 
 NS_IMPL_CYCLE_COLLECTING_ADDREF(WebVTTLoadListener)
@@ -144,12 +146,6 @@ WebVTTLoadListener::AsyncOnChannelRedirect(nsIChannel* aOldChannel,
   if (mElement) {
     mElement->OnChannelRedirect(aOldChannel, aNewChannel, aFlags);
   }
-
-  nsCOMPtr<nsIChannelEventSink> sink = do_QueryInterface(mNextListener);
-  if (sink)
-    return sink->AsyncOnChannelRedirect(aOldChannel, aNewChannel, aFlags, cb);
-
-  cb->OnRedirectVerifyCallback(NS_OK);
   return NS_OK;
 }
 
@@ -182,7 +178,7 @@ WebVTTLoadListener::OnParsedCue(webvtt_cue *aCue)
 
   nsRefPtr<TextTrackCue> textTrackCue =
       new TextTrackCue(mElement->OwnerDoc()->GetParentObject(),
-                       (double)(aCue->from/1000), (double)(aCue->until/1000),
+                       SECONDS_TO_MS(aCue->from), SECONDS_TO_MS(aCue->until),
                        NS_ConvertUTF8toUTF16(text), mElement,
                        aCue->node_head);
   

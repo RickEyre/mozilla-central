@@ -86,6 +86,10 @@ TextTrackCue::RenderCue()
     CreateCueOverlay();
   }
 
+  if (!mTrackElement) {
+    return;
+  }
+  
   HTMLMediaElement* parent =
       static_cast<HTMLMediaElement*>(mTrackElement->mMediaParent.get());
 

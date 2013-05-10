@@ -54,7 +54,6 @@ private:
                               uint32_t aCount, uint32_t *aWriteCount);
 
   nsRefPtr<HTMLTrackElement> mElement;
-  nsCOMPtr<nsIStreamListener> mNextListener;
   uint32_t mLoadID;
   nsAutoRef<webvtt_parser_t> mParser;
 
