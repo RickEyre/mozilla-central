@@ -37,6 +37,9 @@ MOCHITEST_FILES = \
   test_peerConnection_bug835370.html \
   test_peerConnection_bug840344.html \
   test_HTMLTrackElement_Reflect.html \
+  test_HTMLTrackElement_bug871178.html \
+  test_HTMLTrackElement_bug871184.html \
+  test_HTMLTrackElement_bug871188.html \
   test_TextTrackList.html \
   test_TextTrackCue.html \
   basic.vtt \
