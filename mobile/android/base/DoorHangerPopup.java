@@ -54,6 +54,8 @@ public class DoorHangerPopup extends PopupWindow
         registerEventListener("Doorhanger:Add");
         registerEventListener("Doorhanger:Remove");
         Tabs.registerOnTabsChangedListener(this);
+
+        setAnimationStyle(R.style.PopupAnimation);
     }
 
     void destroy() {
@@ -266,8 +268,13 @@ public class DoorHangerPopup extends PopupWindow
             return;
         }
 
-        // If there's no anchor, just show the popup at the top of the gecko app view.
-        if (mAnchor == null) {
+        int[] anchorLocation = new int[2];
+        if (mAnchor != null)
+            mAnchor.getLocationInWindow(anchorLocation);
+
+        // If there's no anchor or the anchor is out of the window bounds,
+        // just show the popup at the top of the gecko app view.
+        if (mAnchor == null || anchorLocation[1] < 0) {
             showAtLocation(mActivity.getView(), Gravity.TOP, 0, 0);
             return;
         }

@@ -95,6 +95,14 @@ var tests = {
       label: "Test Ambient 3",
       menuURL: "https://example.com/testAmbient3"
     };
+    let ambience4 = {
+      name: "testIcon4",
+      iconURL: "https://example.com/browser/browser/base/content/test/moz.png",
+      contentPanel: "about:blank",
+      counter: 0,
+      label: "Test Ambient 4",
+      menuURL: "https://example.com/testAmbient4"
+    };
     Social.provider.setAmbientNotification(ambience);
 
     // for Bug 813834.  Check preference whether stored data is correct.
@@ -102,10 +110,16 @@ var tests = {
 
     Social.provider.setAmbientNotification(ambience2);
     Social.provider.setAmbientNotification(ambience3);
+    
+    try {
+      Social.provider.setAmbientNotification(ambience4);
+    } catch(e) {}
+    let numIcons = Object.keys(Social.provider.ambientNotificationIcons).length;
+    ok(numIcons == 3, "prevent adding more than 3 ambient notification icons");
 
-    let statusIcon = document.querySelector("#social-toolbar-item > .social-notification-container > .toolbarbutton-1");
+    let statusIcon = document.getElementById("social-provider-button").nextSibling;
     waitForCondition(function() {
-      statusIcon = document.querySelector("#social-toolbar-item > .social-notification-container > .toolbarbutton-1");
+      statusIcon = document.getElementById("social-provider-button").nextSibling;
       return !!statusIcon;
     }, function () {
       let badge = statusIcon.getAttribute("badge");

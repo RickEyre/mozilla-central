@@ -1,6 +1,5 @@
-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=99:
- *
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * vim: set ts=8 sts=4 et sw=4 tw=99:
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -29,7 +28,7 @@ JSFunction::initAtom(JSAtom *atom)
 }
 
 inline void
-JSFunction::setGuessedAtom(js::RawAtom atom)
+JSFunction::setGuessedAtom(JSAtom *atom)
 {
     JS_ASSERT(atom_ == NULL);
     JS_ASSERT(atom != NULL);
@@ -89,6 +88,13 @@ JSFunction::initializeExtended()
     JS_ASSERT(mozilla::ArrayLength(toExtended()->extendedSlots) == 2);
     toExtended()->extendedSlots[0].init(js::UndefinedValue());
     toExtended()->extendedSlots[1].init(js::UndefinedValue());
+}
+
+inline void
+JSFunction::initExtendedSlot(size_t which, const js::Value &val)
+{
+    JS_ASSERT(which < mozilla::ArrayLength(toExtended()->extendedSlots));
+    toExtended()->extendedSlots[which].init(val);
 }
 
 inline void
@@ -223,6 +229,12 @@ JSFunction::getBoundFunctionTarget() const
 
     /* Bound functions abuse |parent| to store their target function. */
     return getParent();
+}
+
+inline bool
+js::Class::isCallable() const
+{
+    return this == &js::FunctionClass || call;
 }
 
 #endif /* jsfuninlines_h___ */

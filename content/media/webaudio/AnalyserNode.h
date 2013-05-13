@@ -18,16 +18,11 @@ class AnalyserNode : public AudioNode
 {
 public:
   explicit AnalyserNode(AudioContext* aContext);
-  virtual ~AnalyserNode();
 
   NS_DECL_ISUPPORTS_INHERITED
 
-  virtual JSObject* WrapObject(JSContext* aCx, JSObject* aScope);
-
-  virtual bool SupportsMediaStreams() const MOZ_OVERRIDE
-  {
-    return true;
-  }
+  virtual JSObject* WrapObject(JSContext* aCx,
+                               JS::Handle<JSObject*> aScope) MOZ_OVERRIDE;
 
   void GetFloatFrequencyData(Float32Array& aArray);
   void GetByteFrequencyData(Uint8Array& aArray);
@@ -58,10 +53,20 @@ public:
   void SetSmoothingTimeConstant(double aValue, ErrorResult& aRv);
 
 private:
+  friend class AnalyserNodeEngine;
+  void AppendChunk(const AudioChunk& aChunk);
+  bool AllocateBuffer();
+  bool FFTAnalysis();
+  void ApplyBlackmanWindow(float* aBuffer, uint32_t aSize);
+
+private:
   uint32_t mFFTSize;
   double mMinDecibels;
   double mMaxDecibels;
   double mSmoothingTimeConstant;
+  uint32_t mWriteIndex;
+  FallibleTArray<float> mBuffer;
+  FallibleTArray<float> mOutputBuffer;
 };
 
 }

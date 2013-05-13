@@ -117,3 +117,9 @@ webvtt_validate_cue( webvtt_cue *cue )
 error:
   return 0;
 }
+
+WEBVTT_INTERN webvtt_bool
+cue_is_incomplete( const webvtt_cue *cue ) {
+  return !cue || ( cue->flags & CUE_HEADER_MASK ) == CUE_HAVE_ID;
+}
+

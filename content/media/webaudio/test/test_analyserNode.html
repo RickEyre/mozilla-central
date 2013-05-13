@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-  <title>Test GainNode</title>
+  <title>Test AnalyserNode</title>
   <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
   <script type="text/javascript" src="webaudio.js"></script>
   <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css" />
@@ -31,6 +31,10 @@ addLoadEvent(function() {
   source.connect(analyser);
   analyser.connect(destination);
 
+  is(analyser.channelCount, 1, "analyser node has 2 input channels by default");
+  is(analyser.channelCountMode, "explicit", "Correct channelCountMode for the analyser node");
+  is(analyser.channelInterpretation, "speakers", "Correct channelCountInterpretation for the analyser node");
+
   is(analyser.fftSize, 2048, "Correct default value for fftSize");
   is(analyser.frequencyBinCount, 1024, "Correct default value for frequencyBinCount");
   expectException(function() {
@@ -40,7 +44,16 @@ addLoadEvent(function() {
     analyser.fftSize = 1;
   }, DOMException.INDEX_SIZE_ERR);
   expectException(function() {
+    analyser.fftSize = 8;
+  }, DOMException.INDEX_SIZE_ERR);
+  expectException(function() {
     analyser.fftSize = 100; // non-power of two
+  }, DOMException.INDEX_SIZE_ERR);
+  expectException(function() {
+    analyser.fftSize = 2049;
+  }, DOMException.INDEX_SIZE_ERR);
+  expectException(function() {
+    analyser.fftSize = 4096;
   }, DOMException.INDEX_SIZE_ERR);
   analyser.fftSize = 1024;
   is(analyser.frequencyBinCount, 512, "Correct new value for frequencyBinCount");

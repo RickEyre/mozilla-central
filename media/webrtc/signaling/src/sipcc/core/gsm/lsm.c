@@ -53,8 +53,6 @@ static cc_rcs_t lsm_stop_tone (lsm_lcb_t *lcb, cc_action_data_tone_t *data);
 
 static lsm_lcb_t *lsm_lcbs;
 static uint32_t lsm_call_perline[MAX_REG_LINES];
-boolean lsm_mnc_reached[MAX_REG_LINES]; // maxnumcalls reached
-static boolean lsm_bt_reached[MAX_REG_LINES]; //busy trigger reached
 
 /* This variable is used locally to reflect the CFA state (set/clear)
  * when in CCM mode.
@@ -382,13 +380,13 @@ void lsm_set_lcb_prevent_ringing (callid_t call_id)
         return;
     }
 
-    LSM_DEBUG(DEB_L_C_F_PREFIX"gcid=%d.\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"gcid=%s",
               DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, call_id, "lsm_set_lcb_prevent_ringing"), gcid);
 
     FSM_FOR_ALL_CBS(lcb, lsm_lcbs, LSM_MAX_LCBS) {
         if (lcb->state == LSM_S_RINGIN) {
             if ((lcb->gcid != NULL) && (strncmp(gcid, lcb->gcid, CC_GCID_LEN) == 0)) {
-                LSM_DEBUG(DEB_L_C_F_PREFIX"found ringing call.\n",
+                LSM_DEBUG(DEB_L_C_F_PREFIX"found ringing call, gcid %s",
                           DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, lcb->call_id, "lsm_set_lcb_prevent_ringing"), gcid);
                 FSM_SET_FLAGS(lcb->flags, LSM_FLAGS_PREVENT_RINGING);
             }
@@ -412,7 +410,7 @@ void lsm_remove_lcb_prevent_ringing (callid_t call_id)
         return;
     }
 
-    LSM_DEBUG(DEB_L_C_F_PREFIX"gcid=%d.\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"gcid=%s",
               DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, call_id, "lsm_remove_lcb_prevent_ringing"), gcid);
 
     FSM_FOR_ALL_CBS(lcb, lsm_lcbs, LSM_MAX_LCBS) {
@@ -420,7 +418,7 @@ void lsm_remove_lcb_prevent_ringing (callid_t call_id)
             if ((lcb->gcid != NULL) && (strncmp(gcid, lcb->gcid, CC_GCID_LEN) == 0)) {
                 //FSM_RESET_FLAGS(lcb->flags, LSM_FLAGS_ANSWER_PENDING);
                 lcb->flags = 0;
-                LSM_DEBUG(DEB_L_C_F_PREFIX"found ringing call, gcid=%d, lcb->flags=%d.\n",
+                LSM_DEBUG(DEB_L_C_F_PREFIX"found ringing call, gcid=%s, lcb->flags=%d.",
                           DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, lcb->call_id, "lsm_remove_lcb_prevent_ringing"), gcid, lcb->flags);
             }
             break;
@@ -684,7 +682,7 @@ void lsm_update_dscp_value(fsmdef_dcb_t   *dcb)
     }
     // We would use DSCP for video for both audio and video streams if this is a video call
     if (dcb != NULL) {
-        LSM_DEBUG(DEB_L_C_F_PREFIX"Setting dscp=%d for Rx group_id=%d \n",
+        LSM_DEBUG(DEB_L_C_F_PREFIX"Setting dscp=%d for Rx group_id=%d",
             DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname), dscp,  dcb->group_id);
         vcmSetRtcpDscp(dcb->group_id, dscp);
     }
@@ -724,7 +722,7 @@ lsm_close_rx (lsm_lcb_t *lcb, boolean refresh, fsmdef_media_t *media)
         return;
     }
 
-    LSM_DEBUG(DEB_L_C_F_PREFIX"Called with refresh set to %d\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"Called with refresh set to %d",
               DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname), refresh);
 
     if (media == NULL) {
@@ -797,7 +795,7 @@ lsm_close_tx (lsm_lcb_t *lcb, boolean refresh, fsmdef_media_t *media)
         LSM_ERR_MSG(get_debug_string(DEBUG_INPUT_NULL), fname);
         return;
     }
-    LSM_DEBUG(DEB_L_C_F_PREFIX"called with refresh set to %d\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"called with refresh set to %d",
               DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname), refresh);
 
     config_get_value(CFGID_SDPMODE, &sdpmode, sizeof(sdpmode));
@@ -829,7 +827,7 @@ lsm_close_tx (lsm_lcb_t *lcb, boolean refresh, fsmdef_media_t *media)
                 }
 
                 if (dcb->active_tone == VCM_MONITORWARNING_TONE || dcb->active_tone == VCM_RECORDERWARNING_TONE) {
-                    LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Found active_tone: %d being played, current monrec_tone_action: %d. Need stop tone. \n",
+                    LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Found active_tone: %d being played, current monrec_tone_action: %d. Need stop tone.",
                               DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname), fname,
                               dcb->active_tone, dcb->monrec_tone_action);
                     (void) lsm_stop_tone(lcb, NULL);
@@ -909,7 +907,7 @@ lsm_rx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
          */
         if (media->type != SDP_MEDIA_APPLICATION &&
             !gsmsdp_is_crypto_ready(media, TRUE)) {
-            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Not ready to open receive port (%d)\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Not ready to open receive port (%d)",
                       DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1), fname, media->src_port);
             continue;
         }
@@ -973,7 +971,7 @@ lsm_rx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
             }
 
             if (lsm_open_rx(lcb, &open_rcv, media) != CC_RC_SUCCESS) {
-                LSM_ERR_MSG(LSM_L_C_F_PREFIX"%s: open receive port (%d) failed.\n",
+                LSM_ERR_MSG(LSM_L_C_F_PREFIX"%s: open receive port (%d) failed.",
                             dcb->line, dcb->call_id, fname1,
 							fname, media->src_port);
             } else {
@@ -1038,7 +1036,7 @@ lsm_rx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
                     vcm_tones_t tone = VCM_ZIP;
                     uint16_t    direction = dcb->tone_direction;
 
-                    LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Found play_tone_action: %d. Need to play tone.\n",
+                    LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Found play_tone_action: %d. Need to play tone.",
                               DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname), fname, dcb->play_tone_action);
 
                     // reset to initialized values
@@ -1122,7 +1120,7 @@ lsm_tx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
         }
     }
     group_id = dcb->group_id;
-    LSM_DEBUG(DEB_L_C_F_PREFIX"invoked\n", DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1));
+    LSM_DEBUG(DEB_L_C_F_PREFIX"invoked", DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1));
 
     if (media == NULL) {
         /* NULL value of the given media indicates for all media */
@@ -1146,7 +1144,7 @@ lsm_tx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
          * parameters are not received yet.
          */
         if (!gsmsdp_is_crypto_ready(media, FALSE)) {
-            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Not ready to open transmit port\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Not ready to open transmit port",
                       DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1), fname);
             continue;
         }
@@ -1213,7 +1211,7 @@ lsm_tx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
 
         		if (vcmTxOpen(media->cap_index, dcb->group_id, media->refid,
                             lsm_get_ms_ui_call_handle(lcb->line, lcb->call_id, lcb->ui_id)) != 0) {
-        			LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxOpen failed\n",
+        			LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxOpen failed",
                           DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1), fname);
         			continue;
             	}
@@ -1257,7 +1255,7 @@ lsm_tx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
                   FSM_NEGOTIATED_CRYPTO_TX_KEY(media),
                   &attrs) == -1)
               {
-                LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxStart failed\n",
+                LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxStart failed",
                   DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1), fname);
                 dcb->dsp_out_of_resources = TRUE;
                 return;
@@ -1279,7 +1277,7 @@ lsm_tx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
                   FSM_NEGOTIATED_CRYPTO_DIGEST(media),
                   &attrs) == -1)
               {
-                LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxStartICE failed\n",
+                LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxStartICE failed",
                   DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1), fname);
                 dcb->dsp_out_of_resources = TRUE;
                 return;
@@ -1288,7 +1286,7 @@ lsm_tx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
 
             lsm_update_dscp_value(dcb);
 
-            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxStart started\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: vcmTxStart started",
                   DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname1), fname);
 
             if ( dcb->monrec_tone_action != FSMDEF_MRTONE_NO_ACTION)
@@ -1297,7 +1295,7 @@ lsm_tx_start (lsm_lcb_t *lcb, const char *fname, fsmdef_media_t *media)
                 uint16_t    direction = VCM_PLAY_TONE_TO_EAR;
                 boolean     play_both_tones = FALSE;
 
-                LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Found monrec_tone_action: %d. Need to restart playing tone.\n",
+                LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Found monrec_tone_action: %d. Need to restart playing tone.",
                           DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname), fname, dcb->monrec_tone_action);
 
                 switch (dcb->monrec_tone_action) {
@@ -1370,14 +1368,14 @@ lsm_stop_tone (lsm_lcb_t *lcb, cc_action_data_tone_t *data)
     fsmdef_dcb_t *dcb;
 
     if (lcb == NULL) {
-        LSM_DEBUG(DEB_F_PREFIX"NULL lcb passed\n", DEB_F_PREFIX_ARGS(LSM, fname));
+        LSM_DEBUG(DEB_F_PREFIX"NULL lcb passed", DEB_F_PREFIX_ARGS(LSM, fname));
         return (CC_RC_ERROR);
     }
     call_id = lcb->call_id;
 
     dcb = lcb->dcb;
     if (dcb == NULL) {
-        LSM_DEBUG(DEB_F_PREFIX" NULL dcb passed for call_id = %d\n", DEB_F_PREFIX_ARGS(LSM, fname), call_id);
+        LSM_DEBUG(DEB_F_PREFIX" NULL dcb passed for call_id = %d", DEB_F_PREFIX_ARGS(LSM, fname), call_id);
         return (CC_RC_ERROR);
     }
 
@@ -1422,13 +1420,13 @@ lsm_stop_tone (lsm_lcb_t *lcb, cc_action_data_tone_t *data)
                     break;
             }
 
-            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Setting monrec_tone_action: %d so resume to play correct tone.\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"%s: Setting monrec_tone_action: %d so resume to play correct tone.",
                               DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname), fname,
 			                  dcb->monrec_tone_action);
         }
         dcb->active_tone = VCM_NO_TONE;
     } else {
-        LSM_DEBUG(DEB_L_C_F_PREFIX"Ignoring tone stop request\n",
+        LSM_DEBUG(DEB_L_C_F_PREFIX"Ignoring tone stop request",
                   DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, call_id, fname));
     }
 
@@ -1455,7 +1453,7 @@ lsm_tone_start_with_duration (vcm_tones_t tone, short alert_info,
 
     static const char *fname = "lsm_tone_start_with_duration";
 
-    DEF_DEBUG(DEB_L_C_F_PREFIX"tone=%-2d: direction=%-2d duration=%-2d\n",
+    DEF_DEBUG(DEB_L_C_F_PREFIX"tone=%-2d: direction=%-2d duration=%-2d",
               DEB_L_C_F_PREFIX_ARGS(LSM, GET_LINE_ID(call_handle), GET_CALL_ID(call_handle), fname),
               tone, direction, duration);
 
@@ -1486,7 +1484,7 @@ int lsm_get_used_instances_cnt (line_t line)
     lsm_lcb_t      *lcb;
 
     if (!sip_config_check_line(line)) {
-        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)\n", fname, line);
+        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)", fname, line);
 
         return (-1);
     }
@@ -1543,31 +1541,15 @@ int lsm_get_all_used_instances_cnt ()
  */
 void lsm_increment_call_chn_cnt (line_t line)
 {
-    uint32_t  maxnumcalls = 0;
-    uint32_t  busy_trigger = 0;
-    static const char fname[] = "lsm_increment_call_chn_cnt";
-
     if ( line <=0 || line > MAX_REG_LINES ) {
-        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)\n", fname, line);
+        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)", __FUNCTION__, line);
         return;
     }
     lsm_call_perline[line-1]++;
-    config_get_line_value(CFGID_LINE_MAXNUMCALLS, &maxnumcalls, sizeof(maxnumcalls), line);
-    config_get_line_value(CFGID_LINE_BUSY_TRIGGER, &busy_trigger, sizeof(busy_trigger), line);
-    if (lsm_call_perline[line-1] ==  maxnumcalls) {
-        lsm_mnc_reached[line-1] = TRUE;;
-        ui_mnc_reached(line, TRUE);
-    }
-    if (lsm_call_perline[line - 1] ==  busy_trigger) {
-        lsm_bt_reached[line - 1] = TRUE;;
-    }
 
-    LSM_DEBUG(DEB_F_PREFIX"number of calls on line[%d]=%d"
-        "MaxNumCalls[%d]_reached=%s BusyTrigger[%d]_reached=%s\n",
-        DEB_F_PREFIX_ARGS(LSM, fname),
-        line, lsm_call_perline[line-1],
-        maxnumcalls, (lsm_mnc_reached[line-1] == TRUE) ? "TRUE" : "FALSE",
-        busy_trigger,(lsm_bt_reached[line-1] == TRUE) ? "TRUE" : "FALSE");
+    LSM_DEBUG(DEB_F_PREFIX"number of calls on line[%d]=%d",
+        DEB_F_PREFIX_ARGS(LSM, __FUNCTION__),
+        line, lsm_call_perline[line-1]);
 }
 
 /*
@@ -1582,31 +1564,16 @@ void lsm_increment_call_chn_cnt (line_t line)
  */
 void lsm_decrement_call_chn_cnt (line_t line)
 {
-    uint32_t  maxnumcalls = 0;
-    uint32_t  busy_trigger = 0;
-    static const char fname[] = "lsm_decrement_call_chn_cnt";
-
     if ( line <=0 || line > MAX_REG_LINES ) {
-        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)\n", fname, line);
+        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)", __FUNCTION__, line);
         return;
     }
 
     lsm_call_perline[line-1]--;
-    config_get_line_value(CFGID_LINE_MAXNUMCALLS, &maxnumcalls, sizeof(maxnumcalls), line);
-    config_get_line_value(CFGID_LINE_BUSY_TRIGGER, &busy_trigger, sizeof(busy_trigger), line);
-    if (lsm_call_perline[line-1] <=  (maxnumcalls-1)) {
-        lsm_mnc_reached[line-1] = FALSE;
-        ui_mnc_reached(line, FALSE);
-    }
-    if (lsm_call_perline[line - 1] ==  (busy_trigger -1)) {
-        lsm_bt_reached[line - 1] = FALSE;;
-    }
-    LSM_DEBUG(DEB_F_PREFIX"number of calls on line[%d]=%d"
-        "MaxNumCalls[%d]_reached=%s BusyTrigger[%d]_reached=%s\n",
-        DEB_F_PREFIX_ARGS(LSM, fname),
-        line, lsm_call_perline[line-1],
-        maxnumcalls, (lsm_mnc_reached[line-1] == TRUE) ? "TRUE" : "FALSE",
-        busy_trigger,(lsm_bt_reached[line-1] == TRUE) ? "TRUE" : "FALSE");
+
+    LSM_DEBUG(DEB_F_PREFIX"number of calls on line[%d]=%d",
+        DEB_F_PREFIX_ARGS(LSM, __FUNCTION__),
+        line, lsm_call_perline[line-1]);
 }
 
 #define NO_ROLLOVER 0
@@ -1632,15 +1599,6 @@ line_t lsm_find_next_available_line (line_t line, boolean same_dn, boolean incom
     char dn_name[MAX_LINE_NAME_SIZE];
     uint32_t line_feature;
     line_t  i, j;
-    boolean *limit_reached;
-
-    /* determine whether to use MNC or BT limit */
-    if (incoming == TRUE) {
-        limit_reached = lsm_bt_reached;
-    }
-    else {
-        limit_reached = lsm_mnc_reached;
-    }
 
     config_get_line_string(CFGID_LINE_NAME, current_line_dn_name, line, sizeof(current_line_dn_name));
     /* This line has exhausted its  limit, start rollover */
@@ -1652,17 +1610,15 @@ line_t lsm_find_next_available_line (line_t line, boolean same_dn, boolean incom
         if (line_feature != cfgLineFeatureDN) {
             continue;
         }
-        /* Does this line have room to take the call */
-        if (limit_reached[i-1] == FALSE) {
-            if (same_dn == TRUE) {
-                config_get_line_string(CFGID_LINE_NAME, dn_name, i, sizeof(dn_name));
-                /* Does this line have the same DN */
-                if (cpr_strcasecmp(dn_name, current_line_dn_name) == 0) {
-                    return (i);
-                }
-            } else {
+
+        if (same_dn == TRUE) {
+            config_get_line_string(CFGID_LINE_NAME, dn_name, i, sizeof(dn_name));
+            /* Does this line have the same DN */
+            if (cpr_strcasecmp(dn_name, current_line_dn_name) == 0) {
                 return (i);
             }
+        } else {
+            return (i);
         }
     }
     /*
@@ -1678,18 +1634,16 @@ line_t lsm_find_next_available_line (line_t line, boolean same_dn, boolean incom
         if (line_feature != cfgLineFeatureDN) {
             continue;
         }
-        /* Does this line have room to take the call */
-        if (limit_reached[j-1] == FALSE) {
-            if (same_dn == TRUE) {
-                config_get_line_string(CFGID_LINE_NAME, dn_name, j, sizeof(dn_name));
-                /* Does this line have the same DN */
-                if (cpr_strcasecmp(dn_name, current_line_dn_name) == 0) {
-                    return (j);
-                }
-            } else {
+
+        if (same_dn == TRUE) {
+            config_get_line_string(CFGID_LINE_NAME, dn_name, j, sizeof(dn_name));
+            /* Does this line have the same DN */
+            if (cpr_strcasecmp(dn_name, current_line_dn_name) == 0) {
                 return (j);
             }
-         }
+        } else {
+            return (j);
+        }
     }
 
     return (NO_LINES_AVAILABLE);
@@ -1707,46 +1661,7 @@ line_t lsm_find_next_available_line (line_t line, boolean same_dn, boolean incom
  */
 line_t lsm_get_newcall_line (line_t line)
 {
-    static const char fname[] = "lsm_get_newcall_line";
-    int rollover;
-    line_t found_line;
-
-    if (!lsm_mnc_reached[line-1]) {
-        /* Still room for extra calls on this line */
-        return (line);
-    }
-
-    config_get_value(CFGID_ROLLOVER, &rollover, sizeof(int));
-
-    if (rollover == NO_ROLLOVER) {
-        DEF_DEBUG(DEB_F_PREFIX"NO Rollover, no lines\n", DEB_F_PREFIX_ARGS(LSM, fname));
-        return (NO_LINES_AVAILABLE);
-    }
-
-
-    if (rollover == ROLLOVER_ACROSS_SAME_DN) {
-        /* Look for a line with the same DN */
-        return (lsm_find_next_available_line(line, TRUE, FALSE));
-    }
-
-    if (rollover == ROLLOVER_NEXT_AVAILABLE_LINE) {
-        /* Look for a line with the same DN first */
-        found_line = lsm_find_next_available_line(line, TRUE, FALSE);
-
-        if (found_line == NO_LINES_AVAILABLE) {
-            /*
-             * If nothing found, just look for any line, does
-             * not necessarily have to have the same DN
-             */
-            return (lsm_find_next_available_line(line, FALSE, FALSE));
-        } else {
-            return (found_line);
-        }
-    }
-
-    DEF_DEBUG(DEB_F_PREFIX"No lines available\n", DEB_F_PREFIX_ARGS(LSM, fname));
-
-    return (NO_LINES_AVAILABLE);
+    return line;
 }
 
 /*
@@ -1762,21 +1677,7 @@ line_t lsm_get_newcall_line (line_t line)
  */
 line_t lsm_get_available_line (boolean incoming)
 {
-    line_t line = 1; /* start with line 1 */
-
-    if (incoming == FALSE) {
-        if (!lsm_mnc_reached[line-1]) {
-            /* Still room for extra calls on this line */
-            return (line);
-        }
-    }
-    else {
-        if (!lsm_bt_reached[line-1]) {
-            /* Still room for extra calls on this line */
-            return (line);
-        }
-    }
-    return (lsm_find_next_available_line(line, FALSE, incoming));
+    return 1;
 }
 
 /*
@@ -1792,19 +1693,7 @@ line_t lsm_get_available_line (boolean incoming)
  */
 boolean lsm_is_line_available (line_t line, boolean incoming)
 {
-    if (incoming == FALSE) {
-        if (!lsm_mnc_reached[line-1]) {
-            /* Still room for extra calls on this line */
-            return (TRUE);
-        }
-    }
-    else {
-        if (!lsm_bt_reached[line-1]) {
-            /* Still room for incoming calls on this line */
-            return (TRUE);
-        }
-    }
-    return (FALSE);
+    return TRUE;
 }
 
 /*
@@ -1824,7 +1713,7 @@ lsm_get_instances_available_cnt (line_t line, boolean expline)
     int             free_instances;
 
     if (!sip_config_check_line(line)) {
-        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)\n", fname, line);
+        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)", fname, line);
 
         return (-1);
     }
@@ -1840,11 +1729,11 @@ lsm_get_instances_available_cnt (line_t line, boolean expline)
          int all_max_instances = (expline) ? (LSM_MAX_CALLS) : (LSM_MAX_CALLS - 1);
          int all_free_instances = all_max_instances - all_used_instances;
          free_instances = ((free_instances < all_free_instances) ? free_instances : all_free_instances);
-         LSM_DEBUG("lsm_get_instances_available_cnt: line=%d, expline=%d, free=%d, all_used=%d, all_max=%d, all_free=%d\n",
+         LSM_DEBUG("lsm_get_instances_available_cnt: line=%d, expline=%d, free=%d, all_used=%d, all_max=%d, all_free=%d",
          	line, expline, free_instances, all_used_instances, all_max_instances, all_free_instances);
 
     }
-    LSM_DEBUG("lsm_get_instances_available_cnt: line=%d, expline=%d, free_instances=%d\n",
+    LSM_DEBUG("lsm_get_instances_available_cnt: line=%d, expline=%d, free_instances=%d",
          	line, expline, free_instances);
     return (free_instances);
 }
@@ -1931,7 +1820,7 @@ lsm_get_free_lcb (callid_t call_id, line_t line, fsmdef_dcb_t *dcb)
     lsm_lcb_t      *lcb_found = NULL;
 
     if (!sip_config_check_line(line)) {
-        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)\n", fname, line);
+        LSM_ERR_MSG(LSM_F_PREFIX"invalid line (%d)", fname, line);
 
         return (NULL);
     }
@@ -1973,7 +1862,7 @@ lsm_get_lcb_by_call_id (callid_t call_id)
 {
     lsm_lcb_t *lcb;
     lsm_lcb_t *lcb_found = NULL;
-    LSM_DEBUG(DEB_L_C_F_PREFIX"call_id=%d.\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"call_id=%d.",
               DEB_L_C_F_PREFIX_ARGS(LSM, 0, call_id, "lsm_get_lcb_by_call_id"), call_id);
 
     FSM_FOR_ALL_CBS(lcb, lsm_lcbs, LSM_MAX_LCBS) {
@@ -2013,7 +1902,7 @@ static void
 lsm_change_state (lsm_lcb_t *lcb, int line_num, lsm_states_t new_state)
 {
     static const char fname1[] = "lsm_change_state";
-    LSM_DEBUG(DEB_L_C_F_PREFIX"%d: %s -> %s\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"%d: %s -> %s",
 			  DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, lcb->call_id, fname1),
               line_num, lsm_state_name(lcb->state), lsm_state_name(new_state));
 
@@ -2028,7 +1917,7 @@ lsm_is_phone_idle (void)
     lsm_lcb_t      *lcb;
 
 	if(!lsm_lcbs){
-		LSM_DEBUG(DEB_F_PREFIX"No lsm line cb\n", DEB_F_PREFIX_ARGS(LSM, fname));
+		LSM_DEBUG(DEB_F_PREFIX"No lsm line cb", DEB_F_PREFIX_ARGS(LSM, fname));
 		return (idle);
 	}
 
@@ -2174,7 +2063,7 @@ lsm_get_facility_by_called_number (callid_t call_id,
     line_t     madn_line;
 
     lsm_debug_entry(call_id, 0, fname);
-    LSM_DEBUG(DEB_F_PREFIX"called_number= %s\n", DEB_F_PREFIX_ARGS(LSM, fname), called_number);
+    LSM_DEBUG(DEB_F_PREFIX"called_number= %s", DEB_F_PREFIX_ARGS(LSM, fname), called_number);
 
     //line = sip_config_get_line_by_called_number(1, called_number);
     line = 1;
@@ -2373,7 +2262,7 @@ lsm_tmr_tones_callback (void *data)
     call_id = (callid_t)(long)data;
     if (call_id == CC_NO_CALL_ID) {
         /* Invalid call id */
-        LSM_DEBUG(DEB_F_PREFIX"invalid call id\n", DEB_F_PREFIX_ARGS(LSM, fname));
+        LSM_DEBUG(DEB_F_PREFIX"invalid call id", DEB_F_PREFIX_ARGS(LSM, fname));
         return;
     }
 
@@ -2385,7 +2274,7 @@ lsm_tmr_tones_callback (void *data)
     /* Retrieve dcb from call id */
     dcb = fsmdef_get_dcb_by_call_id(call_id);
     if (dcb == NULL) {
-        LSM_DEBUG(DEB_F_PREFIX"no dcb found for call_id %d\n", DEB_F_PREFIX_ARGS(LSM, fname), call_id);
+        LSM_DEBUG(DEB_F_PREFIX"no dcb found for call_id %d", DEB_F_PREFIX_ARGS(LSM, fname), call_id);
         return;
     }
 
@@ -2680,14 +2569,14 @@ lsm_tone_duration_tmr_callback (void *data)
     call_id = (callid_t)(long)data;
     if (call_id == CC_NO_CALL_ID) {
         /* Invalid call id */
-        LSM_DEBUG(DEB_F_PREFIX"invalid call id\n", DEB_F_PREFIX_ARGS(LSM, fname));
+        LSM_DEBUG(DEB_F_PREFIX"invalid call id", DEB_F_PREFIX_ARGS(LSM, fname));
         return;
     }
 
     /* Retrieve dcb from call id */
     dcb = fsmdef_get_dcb_by_call_id(call_id);
     if (dcb == NULL) {
-        LSM_DEBUG(DEB_F_PREFIX"no dcb found for call_id %d\n", DEB_F_PREFIX_ARGS(LSM, fname), call_id);
+        LSM_DEBUG(DEB_F_PREFIX"no dcb found for call_id %d", DEB_F_PREFIX_ARGS(LSM, fname), call_id);
         return;
     }
 
@@ -2838,9 +2727,9 @@ lsm_set_beep_only_settings (fsmdef_dcb_t *dcb, vcm_tones_t *toneMode_p)
          */
         if (sip_regmgr_get_cc_mode(dcb->line) == REG_MODE_CCM) {
             dcb->alerting_tone = VCM_CALL_WAITING_TONE;
-            LSM_DEBUG(DEB_F_PREFIX"%s - Overriding value in Alert-Info header as line %d is \
-                      connected to a Call Manager.\n",
-                      DEB_F_PREFIX_ARGS(LSM, "lsm_set_beep_only_settings"), dcb->line);
+            LSM_DEBUG(DEB_F_PREFIX" - Overriding value in Alert-Info header as line %d is \
+                      connected to a Call Manager.",
+                      DEB_F_PREFIX_ARGS(LSM, __FUNCTION__), dcb->line);
         }
         *toneMode_p = dcb->alerting_tone;
         switch (dcb->alerting_tone) {
@@ -2910,7 +2799,7 @@ lsm_set_ringer (lsm_lcb_t *lcb, callid_t call_id, line_t line, int alerting)
     int            sdpmode = 0;
 
 
-    LSM_DEBUG(DEB_L_C_F_PREFIX"Entered, state=%d.\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"Entered, state=%d.",
               DEB_L_C_F_PREFIX_ARGS(LSM, line, call_id, fname), lcb->state);
 
     config_get_value(CFGID_SDPMODE, &sdpmode, sizeof(sdpmode));
@@ -2972,7 +2861,7 @@ lsm_set_ringer (lsm_lcb_t *lcb, callid_t call_id, line_t line, int alerting)
 
         if (!lsm_callwaiting()) {
 
-            LSM_DEBUG(DEB_L_C_F_PREFIX"No call waiting, lcb->line=%d, lcb->flag=%d.\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"No call waiting, lcb->line=%d, lcb->flag=%d.",
                       DEB_L_C_F_PREFIX_ARGS(LSM, line, lcb->call_id, fname),
                       lcb->line,
                       lcb->flags);
@@ -3007,7 +2896,7 @@ lsm_set_ringer (lsm_lcb_t *lcb, callid_t call_id, line_t line, int alerting)
                                       &ringSettingIdle, sizeof(ringSettingIdle),
                                       line);
             }
-            LSM_DEBUG(DEB_L_C_F_PREFIX"Ring set mode=%d.\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"Ring set mode=%d.",
                       DEB_L_C_F_PREFIX_ARGS(LSM, line, call_id, fname), ringSettingIdle);
 
             /*
@@ -3052,7 +2941,7 @@ lsm_set_ringer (lsm_lcb_t *lcb, callid_t call_id, line_t line, int alerting)
                 lsm_set_beep_only_settings (dcb, &toneMode);
 
             }
-            LSM_DEBUG(DEB_L_C_F_PREFIX"Alert info=%d, ringSettingIdle=%d, ringerMode=%d\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"Alert info=%d, ringSettingIdle=%d, ringerMode=%d",
                                   DEB_L_C_F_PREFIX_ARGS(LSM, line, call_id, fname),
                                   dcb->alert_info,
                                   ringSettingIdle,
@@ -3078,7 +2967,7 @@ lsm_set_ringer (lsm_lcb_t *lcb, callid_t call_id, line_t line, int alerting)
                 }
                 if (ringSettingIdle == BEEP_ONLY) {
 
-                    LSM_DEBUG(DEB_L_C_F_PREFIX"Idle phone RING SETTING: Beep_only\n",
+                    LSM_DEBUG(DEB_L_C_F_PREFIX"Idle phone RING SETTING: Beep_only",
                               DEB_L_C_F_PREFIX_ARGS(LSM, line, call_id, fname));
 
                     media = gsmsdp_find_audio_media(lcb->dcb);
@@ -3246,7 +3135,7 @@ lsm_set_ringer (lsm_lcb_t *lcb, callid_t call_id, line_t line, int alerting)
                	if ((lsm_is_phone_inactive() == TRUE) &&
 	               	(ccb == NULL) && (xcb == NULL) &&
                    	(lcb->enable_ringback == TRUE)) {
-                    LSM_DEBUG(DEB_L_C_F_PREFIX"Applying ringback\n",
+                    LSM_DEBUG(DEB_L_C_F_PREFIX"Applying ringback",
                               	DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, lcb->call_id, fname));
                     ringer_set = TRUE;
 
@@ -3468,7 +3357,7 @@ lsm_call_sent (lsm_lcb_t *lcb, cc_state_data_call_sent_t *data)
          if (!GSMSDP_MEDIA_ENABLED(media)) {
              continue;
          }
-         LSM_DEBUG(DEB_F_PREFIX"%d %d %d\n", DEB_F_PREFIX_ARGS(LSM, fname), media->direction_set,
+         LSM_DEBUG(DEB_F_PREFIX"%d %d %d", DEB_F_PREFIX_ARGS(LSM, fname), media->direction_set,
                    media->direction, media->is_multicast);
          if ((media->direction_set) &&
              ((media->direction == SDP_DIRECTION_SENDRECV) ||
@@ -3631,10 +3520,10 @@ lsm_far_end_alerting (lsm_lcb_t *lcb, cc_state_data_far_end_alerting_t *data)
                 continue;
             }
             LSM_DEBUG(DEB_L_C_F_PREFIX"direction_set:%d direction:%d"
-                      " dest_addr:0x%x is_multicast:%d\n",
+                      " dest_addr:%p is_multicast:%d",
                       DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname),
                       media->direction_set,
-                      media->direction, media->dest_addr,
+                      media->direction, &media->dest_addr,
                       media->is_multicast);
 
             if (media->direction_set) {
@@ -3869,11 +3758,11 @@ lsm_update_media (lsm_lcb_t *lcb, const char *caller_fname)
             for (i = 0; i < media->num_payloads; i++)
             {
                 LSM_DEBUG(DEB_L_C_F_PREFIX"%d rx, tx refresh's are %d %d"
-                          ", dir=%d, payload=%d addr=%s, multicast=%d\n",
+                          ", dir=%d, payload=%p addr=%s, multicast=%d\n",
                           DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line,
                           dcb->call_id, fname), media->refid, rx_refresh,
                           tx_refresh, media->direction,
-                          media->payloads[i], addr_str, media->is_multicast );
+                          &media->payloads[i], addr_str, media->is_multicast );
             }
         }
         if (rx_refresh ||
@@ -4383,7 +4272,7 @@ lsm_onhook (lsm_lcb_t *lcb, cc_state_data_onhook_t *data)
 
     cause = data->cause;
     if (FSM_CHK_FLAGS(dcb->flags, FSMDEF_F_XFER_COMPLETE)) {
-        DEF_DEBUG(DEB_F_PREFIX"Transfer complete.\n", DEB_F_PREFIX_ARGS(LSM, "lsm_onhook"));
+        DEF_DEBUG(DEB_F_PREFIX"Transfer complete.", DEB_F_PREFIX_ARGS(LSM, "lsm_onhook"));
         cause = CC_CAUSE_XFER_COMPLETE;
     }
     lsm_ui_call_state(evOnHook, line, lcb, cause);
@@ -4897,11 +4786,11 @@ lsm_update_placed_callinfo (void *data)
     static const char fname[] = "lsm_update_placed_callinfo";
     boolean has_called_number = FALSE;
 
-    LSM_DEBUG(DEB_F_PREFIX"Entering ...\n", DEB_F_PREFIX_ARGS(LSM, fname));
+    LSM_DEBUG(DEB_F_PREFIX"Entering ...", DEB_F_PREFIX_ARGS(LSM, fname));
     dcb = (fsmdef_dcb_t *) data;
     lcb = lsm_get_lcb_by_call_id(dcb->call_id);
     if (lcb == NULL) {
-        LSM_DEBUG(DEB_F_PREFIX"Exiting: lcb not found\n", DEB_F_PREFIX_ARGS(LSM, fname));
+        LSM_DEBUG(DEB_F_PREFIX"Exiting: lcb not found", DEB_F_PREFIX_ARGS(LSM, fname));
         return;
     }
 
@@ -4916,7 +4805,7 @@ lsm_update_placed_callinfo (void *data)
 
     /* if tmp_called_number is NULL or empty, return */
     if (tmp_called_number == NULL || (*tmp_called_number) == NUL) {
-        LSM_DEBUG(DEB_L_C_F_PREFIX"Exiting : dialed digits is empty\n",
+        LSM_DEBUG(DEB_L_C_F_PREFIX"Exiting : dialed digits is empty",
                   DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, lcb->call_id, fname));
         return;
     }
@@ -4944,7 +4833,7 @@ lsm_update_placed_callinfo (void *data)
     }
     ui_update_placed_call_info(lcb->line, lcb->call_id, called_name,
                                tmp_called_number);
-    LSM_DEBUG(DEB_L_C_F_PREFIX"Exiting: invoked ui_update_placed_call_info()\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"Exiting: invoked ui_update_placed_call_info()",
               DEB_L_C_F_PREFIX_ARGS(LSM, lcb->line, lcb->call_id, fname));
 }
 
@@ -4995,7 +4884,7 @@ lsm_init (void)
      */
     lsm_lcbs = (lsm_lcb_t *) cpr_calloc(LSM_MAX_LCBS, sizeof(lsm_lcb_t));
     if (lsm_lcbs == NULL) {
-        LSM_ERR_MSG(LSM_F_PREFIX"lsm_lcbs cpr_calloc returned NULL\n", fname);
+        LSM_ERR_MSG(LSM_F_PREFIX"lsm_lcbs cpr_calloc returned NULL", fname);
         return;
     }
 
@@ -5021,8 +4910,6 @@ lsm_init (void)
 
     for (i=0 ; i<MAX_REG_LINES; i++) {
         lsm_call_perline[i] = 0;
-        lsm_mnc_reached[i] = FALSE;
-        lsm_bt_reached[i] = FALSE;
     }
 
     memset(cfwdall_state_in_ccm_mode, 0, sizeof(cfwdall_state_in_ccm_mode));
@@ -5062,8 +4949,6 @@ lsm_reset (void)
 
     for (i=0 ; i<MAX_REG_LINES; i++) {
         lsm_call_perline[i] = 0;
-        lsm_mnc_reached[i] = FALSE;
-        lsm_bt_reached[i] = FALSE;
     }
 
     for (line=0; line < MAX_REG_LINES+1; line++) {
@@ -5265,7 +5150,7 @@ lsm_stop_media (lsm_lcb_t *lcb, callid_t call_id, line_t line,
             lsm_close_tx(lcb, FALSE, media);
         } else {
             /* no entry found */
-            LSM_DEBUG(DEB_L_C_F_PREFIX"no media with reference ID %d found\n",
+            LSM_DEBUG(DEB_L_C_F_PREFIX"no media with reference ID %d found",
                       DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, dcb->call_id, fname),
 					  data->stop_media.media_refid);
             return;
@@ -5287,26 +5172,38 @@ lsm_stop_media (lsm_lcb_t *lcb, callid_t call_id, line_t line,
  *   [in]  call_id - GSM call ID
  *   [in]  media - media line to add as remote stream
  *   [out] pc_stream_id
- * Returns: None
+ *
+ * Returns: CC_RC_SUCCESS or CC_RC_ERROR if unable to create or add stream
  */
-void lsm_add_remote_stream (line_t line, callid_t call_id, fsmdef_media_t *media, int *pc_stream_id)
+cc_rcs_t
+lsm_add_remote_stream (line_t line, callid_t call_id, fsmdef_media_t *media, int *pc_stream_id)
 {
-    static const char fname[] = "lsm_add_remote_stream";
-    fsmdef_dcb_t   *dcb;
     lsm_lcb_t *lcb;
+    fsmdef_dcb_t *dcb;
+    int vcm_ret;
 
     lcb = lsm_get_lcb_by_call_id(call_id);
-    if (lcb != NULL) {
-        dcb = lcb->dcb;
-        if (dcb == NULL) {
-            LSM_ERR_MSG(get_debug_string(DEBUG_INPUT_NULL), fname);
-            return;
-        }
-
-        vcmCreateRemoteStream(media->cap_index, dcb->peerconnection,
-                pc_stream_id);
-
+    if (!lcb) {
+        CSFLogError(logTag, "%s: lcb is null", __FUNCTION__);
+        return CC_RC_ERROR;
     }
+
+    dcb = lcb->dcb;
+    if (!dcb) {
+        CSFLogError(logTag, "%s: dcb is null", __FUNCTION__);
+        return CC_RC_ERROR;
+    }
+
+    vcm_ret = vcmCreateRemoteStream(media->cap_index, dcb->peerconnection,
+            pc_stream_id);
+
+    if (vcm_ret) {
+        CSFLogError(logTag, "%s: vcmCreateRemoteStream returned error: %d",
+            __FUNCTION__, vcm_ret);
+        return CC_RC_ERROR;
+    }
+
+    return CC_RC_SUCCESS;
 }
 
 /*
@@ -5664,7 +5561,7 @@ lsm_update_active_tone (vcm_tones_t tone, callid_t call_id)
              * the current one. Technically its okay. So, just printing a log msg.
              */
             if (dcb->active_tone != VCM_NO_TONE) {
-                LSM_DEBUG(DEB_L_C_F_PREFIX"Active Tone current = %d  new = %d\n",
+                LSM_DEBUG(DEB_L_C_F_PREFIX"Active Tone current = %d  new = %d",
                           DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, call_id, fname),
 						  dcb->active_tone, tone);
             }
@@ -5758,7 +5655,7 @@ lsm_update_monrec_tone_action (vcm_tones_t tone, callid_t call_id, uint16_t dire
                         case FSMDEF_MRTONE_RESUME_MONITOR_TONE:
                         case FSMDEF_MRTONE_RESUME_BOTH_TONES:
                         default:
-                            DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d \n",
+                            DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d",
                                       DEB_F_PREFIX_ARGS("RCC", fname), tone, dcb->monrec_tone_action);
                             break;
                     }
@@ -5788,7 +5685,7 @@ lsm_update_monrec_tone_action (vcm_tones_t tone, callid_t call_id, uint16_t dire
                         case FSMDEF_MRTONE_RESUME_RECORDER_TONE:
                         case FSMDEF_MRTONE_RESUME_BOTH_TONES:
                         default:
-                            DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d \n",
+                            DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d",
                                       DEB_F_PREFIX_ARGS("RCC", fname), tone, dcb->monrec_tone_action);
                             break;
                     }
@@ -5799,7 +5696,7 @@ lsm_update_monrec_tone_action (vcm_tones_t tone, callid_t call_id, uint16_t dire
                     break;
         } /* end of switch */
 
-        LSM_DEBUG(DEB_L_C_F_PREFIX"Start request for tone: %d. Set monrec_tone_action: %d\n",
+        LSM_DEBUG(DEB_L_C_F_PREFIX"Start request for tone: %d. Set monrec_tone_action: %d",
                   DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, call_id, fname),
 			      tone, dcb->monrec_tone_action);
 
@@ -5849,7 +5746,7 @@ lsm_downgrade_monrec_tone_action (vcm_tones_t tone, callid_t call_id)
                     case FSMDEF_MRTONE_PLAYED_RECORDER_TONE:
                     case FSMDEF_MRTONE_RESUME_RECORDER_TONE:
                     default:
-                        DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d \n",
+                        DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d",
                                   DEB_F_PREFIX_ARGS("RCC", fname), tone, dcb->monrec_tone_action);
                         break;
                 }
@@ -5875,7 +5772,7 @@ lsm_downgrade_monrec_tone_action (vcm_tones_t tone, callid_t call_id)
                     case FSMDEF_MRTONE_PLAYED_MONITOR_TONE:
                     case FSMDEF_MRTONE_RESUME_MONITOR_TONE:
                     default:
-                        DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d \n",
+                        DEF_DEBUG(DEB_F_PREFIX"Invalid action request... tone:%d monrec_tone_action:%d",
                                   DEB_F_PREFIX_ARGS("RCC", fname), tone, dcb->monrec_tone_action);
                         break;
                 }
@@ -5886,7 +5783,7 @@ lsm_downgrade_monrec_tone_action (vcm_tones_t tone, callid_t call_id)
                 break;
         } /* end of switch */
 
-        LSM_DEBUG(DEB_L_C_F_PREFIX"Stop request for tone: %d Downgrade monrec_tone_action: %d \n",
+        LSM_DEBUG(DEB_L_C_F_PREFIX"Stop request for tone: %d Downgrade monrec_tone_action: %d",
                   DEB_L_C_F_PREFIX_ARGS(LSM, dcb->line, call_id, fname),
 			      tone, dcb->monrec_tone_action);
     } /* end of if */
@@ -5911,7 +5808,7 @@ lsm_set_hold_ringback_status(callid_t call_id, boolean ringback_status)
 
     FSM_FOR_ALL_CBS(lcb, lsm_lcbs, LSM_MAX_LCBS) {
         if (lcb->call_id == call_id) {
-            LSM_DEBUG(DEB_F_PREFIX"Setting ringback to %d for lcb %d\n",
+            LSM_DEBUG(DEB_F_PREFIX"Setting ringback to %d for lcb %d",
                       DEB_F_PREFIX_ARGS(LSM, "lsm_set_hold_ringback_status"),  ringback_status, call_id);
             lcb->enable_ringback = ringback_status;
             break;
@@ -5982,7 +5879,7 @@ lsm_update_inalert_status (line_t line, callid_t call_id,
     sstrncpy(disp_str, platform_get_phrase_index_str(UI_FROM),
              sizeof(disp_str));
 
-    LSM_DEBUG(DEB_L_C_F_PREFIX"+++ calling number = %s\n",
+    LSM_DEBUG(DEB_L_C_F_PREFIX"+++ calling number = %s",
 			  DEB_L_C_F_PREFIX_ARGS(LSM, line, call_id, fname),
               data->caller_id.calling_number);
 
@@ -6162,7 +6059,7 @@ lsm_is_phone_forwarded (line_t line)
     cpr_ip_addr_t proxy_ipaddr;
 
 
-    LSM_DEBUG(DEB_F_PREFIX"called\n", DEB_F_PREFIX_ARGS(LSM, fname));
+    LSM_DEBUG(DEB_F_PREFIX"called", DEB_F_PREFIX_ARGS(LSM, fname));
 
     // check if running in CCM mode. if so, return NULL that is cfwdall
     // not applicable
@@ -6532,7 +6429,7 @@ static void lsm_util_start_tone(vcm_tones_t tone, short alert_info,
     static const char fname[] = "lsm_util_start_tone";
     line_t line = GET_LINE_ID(call_handle);
     callid_t call_id = GET_CALL_ID(call_handle);
-    DEF_DEBUG(DEB_F_PREFIX"Enter, line=%d, call_id=%d.\n",
+    DEF_DEBUG(DEB_F_PREFIX"Enter, line=%d, call_id=%d.",
               DEB_F_PREFIX_ARGS(MED_API, fname), line, call_id);
 
     sdpmode = 0;
@@ -6586,7 +6483,7 @@ lsm_util_tone_start_with_speaker_as_backup (vcm_tones_t tone, short alert_info,
     static const char *fname = "lsm_util_tone_start_with_speaker_as_backup";
     line_t line = GET_LINE_ID(call_handle);
     callid_t call_id = GET_CALL_ID(call_handle);
-    DEF_DEBUG(DEB_L_C_F_PREFIX"tone=%-2d: direction=%-2d\n",
+    DEF_DEBUG(DEB_L_C_F_PREFIX"tone=%-2d: direction=%-2d",
               DEB_L_C_F_PREFIX_ARGS(MED_API, line, call_id, fname),
               tone, direction);
 

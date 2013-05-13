@@ -9,7 +9,6 @@ const Cr = Components.results;
 Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("resource://gre/modules/commonjs/sdk/core/promise.js");
-Components.utils.import("resource://gre/modules/Deprecated.jsm");
 
 XPCOMUtils.defineLazyModuleGetter(this, "DeferredTask",
   "resource://gre/modules/DeferredTask.jsm");
@@ -58,6 +57,7 @@ const SEARCH_ENGINE_ADDED        = "engine-added";
 const SEARCH_ENGINE_CHANGED      = "engine-changed";
 const SEARCH_ENGINE_LOADED       = "engine-loaded";
 const SEARCH_ENGINE_CURRENT      = "engine-current";
+const SEARCH_ENGINE_DEFAULT      = "engine-default";
 
 // The following constants are left undocumented in nsIBrowserSearchService.idl
 // For the moment, they are meant for testing/debugging purposes only.
@@ -2591,13 +2591,11 @@ SearchService.prototype = {
     }
 
     let warning =
-      "Search service falling back to synchronous initialization at " +
-      new Error().stack +
-      "\n" +
+      "Search service falling back to synchronous initialization. " +
       "This is generally the consequence of an add-on using a deprecated " +
       "search service API.";
-    // Bug 785487 - Disable reportError until our own callers are fixed.
-    //Components.utils.reportError(warning);
+    // Bug 785487 - Disable warning until our own callers are fixed.
+    //Deprecated.warning(warning, "https://developer.mozilla.org/en-US/docs/XPCOM_Interface_Reference/nsIBrowserSearchService#async_warning");
     LOG(warning);
 
     engineMetadataService.syncInit();
@@ -2611,6 +2609,7 @@ SearchService.prototype = {
   // Used by |_ensureInitialized| as a fallback if initialization is not
   // complete. In this implementation, it is also used by |init|.
   _syncInit: function SRCH_SVC__syncInit() {
+    LOG("_syncInit start");
     try {
       this._syncLoadEngines();
     } catch (ex) {
@@ -2621,7 +2620,7 @@ SearchService.prototype = {
 
     gInitialized = true;
     this._initObservers.resolve(this._initRV);
-    LOG("_syncInit: Completed _syncInit");
+    LOG("_syncInit end");
   },
 
   _engines: { },
@@ -2631,10 +2630,6 @@ SearchService.prototype = {
       return this._buildSortedEngineList();
     return this.__sortedEngines;
   },
-
-  // Whether or not we need to write the order of engines on shutdown. This
-  // needs to happen anytime _sortedEngines is modified after initial startup. 
-  _needToSetOrderPrefs: false,
 
   _buildCache: function SRCH_SVC__buildCache() {
     if (!getBoolPref(BROWSER_SEARCH_PREF + "cache.enabled", true))
@@ -2794,7 +2789,7 @@ SearchService.prototype = {
     try {
       stream.init(aFile, MODE_RDONLY, PERMS_FILE, 0);
       return json.decodeFromStream(stream, stream.available());
-    } catch(ex) {
+    } catch (ex) {
       LOG("_readCacheFile: Error reading cache file: " + ex);
     } finally {
       stream.close();
@@ -2866,7 +2861,7 @@ SearchService.prototype = {
       // will be built once we need it.
       if (this.__sortedEngines) {
         this.__sortedEngines.push(aEngine);
-        this._needToSetOrderPrefs = true;
+        this._saveSortedEngineList();
       }
       notifyAction(aEngine, SEARCH_ENGINE_ADDED);
     }
@@ -3053,12 +3048,7 @@ SearchService.prototype = {
   },
 
   _saveSortedEngineList: function SRCH_SVC_saveSortedEngineList() {
-    // We only need to write the prefs. if something has changed.
     LOG("SRCH_SVC_saveSortedEngineList: starting");
-    if (!this._needToSetOrderPrefs)
-      return;
-
-    LOG("SRCH_SVC_saveSortedEngineList: something to do");
 
     // Set the useDB pref to indicate that from now on we should use the order
     // information stored in the database.
@@ -3090,29 +3080,34 @@ SearchService.prototype = {
     // prefs.
     if (getBoolPref(BROWSER_SEARCH_PREF + "useDBForOrder", false)) {
       LOG("_buildSortedEngineList: using db for order");
+
+      // Flag to keep track of whether or not we need to call _saveSortedEngineList. 
+      let needToSaveEngineList = false;
+
       for each (engine in this._engines) {
         var orderNumber = engineMetadataService.getAttr(engine, "order");
 
         // Since the DB isn't regularly cleared, and engine files may disappear
         // without us knowing, we may already have an engine in this slot. If
         // that happens, we just skip it - it will be added later on as an
-        // unsorted engine. This problem will sort itself out when we call
-        // _saveSortedEngineList at shutdown.
+        // unsorted engine.
         if (orderNumber && !this.__sortedEngines[orderNumber-1]) {
           this.__sortedEngines[orderNumber-1] = engine;
           addedEngines[engine.name] = engine;
         } else {
-          // We need to call _saveSortedEngines so this gets sorted out.
-          this._needToSetOrderPrefs = true;
+          // We need to call _saveSortedEngineList so this gets sorted out.
+          needToSaveEngineList = true;
         }
       }
 
       // Filter out any nulls for engines that may have been removed
       var filteredEngines = this.__sortedEngines.filter(function(a) { return !!a; });
       if (this.__sortedEngines.length != filteredEngines.length)
-        this._needToSetOrderPrefs = true;
+        needToSaveEngineList = true;
       this.__sortedEngines = filteredEngines;
 
+      if (needToSaveEngineList)
+        this._saveSortedEngineList();
     } else {
       // The DB isn't being used, so just read the engine order from the prefs
       var i = 0;
@@ -3291,6 +3286,7 @@ SearchService.prototype = {
 
   // nsIBrowserSearchService
   init: function SRCH_SVC_init(observer) {
+    LOG("SearchService.init");
     let self = this;
     if (!this._initStarted) {
       TelemetryStopwatch.start("SEARCH_SERVICE_INIT_MS");
@@ -3463,15 +3459,22 @@ SearchService.prototype = {
       FAIL("no engine passed to removeEngine!");
 
     var engineToRemove = null;
-    for (var e in this._engines)
+    for (var e in this._engines) {
       if (aEngine.wrappedJSObject == this._engines[e])
         engineToRemove = this._engines[e];
+    }
 
     if (!engineToRemove)
       FAIL("removeEngine: Can't find engine to remove!", Cr.NS_ERROR_FILE_NOT_FOUND);
 
-    if (engineToRemove == this.currentEngine)
+    if (engineToRemove == this.currentEngine) {
       this._currentEngine = null;
+    }
+    
+    if (engineToRemove == this.defaultEngine) {
+      this._defaultEngine = null;
+      Services.prefs.clearUserPref(BROWSER_SEARCH_PREF + "defaultenginename");
+    }
 
     if (engineToRemove._readOnly) {
       // Just hide it (the "hidden" setter will notify) and remove its alias to
@@ -3501,7 +3504,7 @@ SearchService.prototype = {
       notifyAction(engineToRemove, SEARCH_ENGINE_REMOVED);
 
       // Since we removed an engine, we need to update the preferences.
-      this._needToSetOrderPrefs = true;
+      this._saveSortedEngineList();
     }
   },
 
@@ -3552,7 +3555,7 @@ SearchService.prototype = {
     notifyAction(engine, SEARCH_ENGINE_CHANGED);
 
     // Since we moved an engine, we need to update the preferences.
-    this._needToSetOrderPrefs = true;
+    this._saveSortedEngineList();
   },
 
   restoreDefaultEngines: function SRCH_SVC_resetDefaultEngines() {
@@ -3564,18 +3567,36 @@ SearchService.prototype = {
     }
   },
 
-  get originalDefaultEngine() {
-    this._ensureInitialized();
-    const defPref = BROWSER_SEARCH_PREF + "defaultenginename";
-    return this.getEngineByName(getLocalizedPref(defPref, ""));
-  },
-
   get defaultEngine() {
     this._ensureInitialized();
-    let defaultEngine = this.originalDefaultEngine;
-    if (!defaultEngine || defaultEngine.hidden)
-      defaultEngine = this._getSortedEngines(false)[0] || null;
-    return defaultEngine;
+    if (!this._defaultEngine || this._defaultEngine.hidden) {
+      let defPref = BROWSER_SEARCH_PREF + "defaultenginename";
+      let defaultEngine = this.getEngineByName(getLocalizedPref(defPref, ""))
+      if (!defaultEngine || defaultEngine.hidden)
+        defaultEngine = this._getSortedEngines(false)[0] || null;
+      this._defaultEngine = defaultEngine;
+    }
+    return this._defaultEngine;
+  },
+
+  set defaultEngine(val) {
+    this._ensureInitialized();
+    if (!(val instanceof Ci.nsISearchEngine))
+      FAIL("Invalid argument passed to defaultEngine setter");
+
+    let newDefaultEngine = this.getEngineByName(val.name);
+    if (!newDefaultEngine)
+      FAIL("Can't find engine in store!", Cr.NS_ERROR_UNEXPECTED);
+
+    if (newDefaultEngine == this._defaultEngine)
+      return;
+
+    this._defaultEngine = newDefaultEngine;
+
+    let defPref = BROWSER_SEARCH_PREF + "defaultenginename";
+    setLocalizedPref(defPref, this._defaultEngine.name);
+
+    notifyAction(this._defaultEngine, SEARCH_ENGINE_DEFAULT);
   },
 
   get currentEngine() {
@@ -3590,6 +3611,7 @@ SearchService.prototype = {
       this._currentEngine = this.defaultEngine;
     return this._currentEngine;
   },
+
   set currentEngine(val) {
     this._ensureInitialized();
     if (!(val instanceof Ci.nsISearchEngine))
@@ -3598,6 +3620,9 @@ SearchService.prototype = {
     var newCurrentEngine = this.getEngineByName(val.name);
     if (!newCurrentEngine)
       FAIL("Can't find engine in store!", Cr.NS_ERROR_UNEXPECTED);
+
+    if (newCurrentEngine == this._currentEngine)
+      return;
 
     this._currentEngine = newCurrentEngine;
 
@@ -3638,7 +3663,6 @@ SearchService.prototype = {
 
       case QUIT_APPLICATION_TOPIC:
         this._removeObservers();
-        this._saveSortedEngineList();
         if (this._batchTimer) {
           // Flush to disk immediately
           this._batchTimer.cancel();
@@ -3751,7 +3775,7 @@ var engineMetadataService = {
       let initializer = this._initializer = Promise.defer();
       TaskUtils.spawn((function task_init() {
         LOG("metadata init: starting");
-        switch(this._initState) {
+        switch (this._initState) {
           case engineMetadataService._InitStates.NOT_STARTED:
             // 1. Load json file if it exists
             try {
@@ -3763,6 +3787,7 @@ var engineMetadataService = {
               }
               this._store = JSON.parse(new TextDecoder().decode(contents));
               this._initState = engineMetadataService._InitStates.FINISHED_SUCCESS;
+              return;
             } catch (ex) {
               if (this._initState == engineMetadataService._InitStates.FINISHED_SUCCESS) {
                 // No need to pursue asynchronous initialization,
@@ -3783,7 +3808,7 @@ var engineMetadataService = {
             // Fall through to the next state
 
           case engineMetadataService._InitStates.JSON_LOADING_ATTEMPTED:
-              // 2. Otherwise, load db
+            // 2. Otherwise, load db
             try {
               let store = yield this._asyncMigrateOldDB();
               if (this._initState == engineMetadataService._InitStates.FINISHED_SUCCESS) {
@@ -3813,9 +3838,10 @@ var engineMetadataService = {
             break;
 
           default:
-              throw new Error("Internal error: invalid state " + this._initState);
-          }}).bind(this)).then(
-
+            throw new Error("metadata init: invalid state " + this._initState);
+        }
+        LOG("metadata init: complete");
+      }).bind(this)).then(
         // 3. Inform any observers
         function onSuccess() {
           initializer.resolve();
@@ -3837,9 +3863,8 @@ var engineMetadataService = {
    * initialization.
    */
   syncInit: function epsSyncInit() {
-    Deprecated.warning("Search service falling back to deprecated synchronous initializer.", "https://developer.mozilla.org/en-US/docs/XPCOM_Interface_Reference/nsIBrowserSearchService#async_warning");
-    LOG("metadata syncInit: starting");
-    switch(this._initState) {
+    LOG("metadata syncInit start");
+    switch (this._initState) {
       case engineMetadataService._InitStates.NOT_STARTED:
         let jsonFile = new FileUtils.File(this._jsonFile);
         // 1. Load json file if it exists
@@ -3879,7 +3904,7 @@ var engineMetadataService = {
         break;
 
       default:
-        throw new Error("Internal error: invalid state " + this._initState);
+        throw new Error("metadata syncInit: invalid state " + this._initState);
     }
 
     // 3. Inform any observers
@@ -3888,6 +3913,7 @@ var engineMetadataService = {
     } else {
       this._initializer = Promise.resolve();
     }
+    LOG("metadata syncInit end");
   },
 
   getAttr: function epsGetAttr(engine, name) {
@@ -3967,16 +3993,15 @@ var engineMetadataService = {
   },
 
    _syncMigrateOldDB: function SRCH_SVC_EMS_migrate() {
-     LOG("SRCH_SVC_EMS_migrate start");
      let sqliteFile = FileUtils.getFile(NS_APP_USER_PROFILE_50_DIR,
                                         ["search.sqlite"]);
      if (!sqliteFile.exists()) {
-       LOG("SRCH_SVC_EMS_migrate search.sqlite does not exist");
+       LOG("metadata _syncMigrateOldDB: search.sqlite does not exist");
        return null;
      }
      let store = {};
      try {
-       LOG("SRCH_SVC_EMS_migrate Migrating data from SQL");
+       LOG("metadata _syncMigrateOldDB: Migrating data from SQL");
        const sqliteDb = Services.storage.openDatabase(sqliteFile);
        const statement = sqliteDb.createStatement("SELECT * from engine_data");
        while (statement.executeStep()) {
@@ -3992,7 +4017,7 @@ var engineMetadataService = {
       statement.finalize();
       sqliteDb.close();
      } catch (ex) {
-       LOG("SRCH_SVC_EMS_migrate failed: " + ex);
+       LOG("metadata _syncMigrateOldDB failed: " + ex);
        return null;
      }
      return store;
@@ -4005,47 +4030,45 @@ var engineMetadataService = {
     * - we do not remove search.sqlite after migration, so as to allow
     * downgrading and forensics;
     */
-   _asyncMigrateOldDB: function SRCH_SVC_EMS_asyncMigrate() {
-     LOG("SRCH_SVC_EMS_asyncMigrate start");
-     return TaskUtils.spawn(function task() {
-       let sqliteFile = FileUtils.getFile(NS_APP_USER_PROFILE_50_DIR,
-           ["search.sqlite"]);
-       if (!(yield OS.File.exists(sqliteFile.path))) {
-         LOG("SRCH_SVC_EMS_migrate search.sqlite does not exist");
-         throw new Task.Result(); // Bail out
-       }
-       let store = {};
-       LOG("SRCH_SVC_EMS_migrate Migrating data from SQL");
-       const sqliteDb = Services.storage.openDatabase(sqliteFile);
-       const statement = sqliteDb.createStatement("SELECT * from engine_data");
-       try {
-         yield TaskUtils.executeStatement(
-           statement,
-           function onResult(aResultSet) {
-             while (true) {
-               let row = aResultSet.getNextRow();
-               if (!row) {
-                 break;
-               }
-               let engine = row.engineid;
-               let name   = row.name;
-               let value  = row.value;
-               if (!store[engine]) {
-                 store[engine] = {};
-               }
-               store[engine][name] = value;
-             }
-           }
-         );
-       } catch(ex) {
-         // If loading the db failed, ignore the db
-         throw new Task.Result(); // Bail out
-       } finally {
-         sqliteDb.asyncClose();
-       }
-       throw new Task.Result(store);
-     });
-   },
+  _asyncMigrateOldDB: function SRCH_SVC_EMS_asyncMigrate() {
+    return TaskUtils.spawn(function task() {
+      let sqliteFile = FileUtils.getFile(NS_APP_USER_PROFILE_50_DIR, ["search.sqlite"]);
+      if (!(yield OS.File.exists(sqliteFile.path))) {
+        LOG("metadata _asyncMigrateOldDB: search.sqlite does not exist");
+        throw new Task.Result(); // Bail out
+      }
+      LOG("metadata _asyncMigrateOldDB: Migrating data from SQL");
+      let store = {};
+      const sqliteDb = Services.storage.openDatabase(sqliteFile);
+      const statement = sqliteDb.createStatement("SELECT * from engine_data");
+      try {
+        yield TaskUtils.executeStatement(
+          statement,
+          function onResult(aResultSet) {
+            while (true) {
+              let row = aResultSet.getNextRow();
+              if (!row) {
+                break;
+              }
+              let engine = row.engineid;
+              let name   = row.name;
+              let value  = row.value;
+              if (!store[engine]) {
+                store[engine] = {};
+              }
+              store[engine][name] = value;
+            }
+          }
+        );
+      } catch (ex) {
+        // If loading the db failed, ignore the db
+        throw new Task.Result(); // Bail out
+      } finally {
+        sqliteDb.asyncClose();
+      }
+      throw new Task.Result(store);
+    });
+  },
 
   /**
    * Commit changes to disk, asynchronously.
@@ -4059,34 +4082,34 @@ var engineMetadataService = {
    *               If not specified, this._store is used.
    */
   _commit: function epsCommit(aStore) {
-    LOG("epsCommit: start");
+    LOG("metadata _commit: start");
     let store = aStore || this._store;
     if (!store) {
-      LOG("epsCommit: nothing to do");
+      LOG("metadata _commit: nothing to do");
       return;
     }
 
     if (!this._lazyWriter) {
-      LOG("epsCommit: initializing lazy writer");
+      LOG("metadata _commit: initializing lazy writer");
       function writeCommit() {
-        LOG("epsWriteCommit: start");
+        LOG("metadata writeCommit: start");
         let data = gEncoder.encode(JSON.stringify(store));
         let path = engineMetadataService._jsonFile;
-        LOG("epsCommit path " + path);
+        LOG("metadata writeCommit: path " + path);
         let promise = OS.File.writeAtomic(path, data, { tmpPath: path + ".tmp" });
         promise = promise.then(
           function onSuccess() {
             Services.obs.notifyObservers(null,
               SEARCH_SERVICE_TOPIC,
               SEARCH_SERVICE_METADATA_WRITTEN);
-            LOG("epsWriteCommit: done");
+            LOG("metadata writeCommit: done");
           }
         );
         TaskUtils.captureErrors(promise);
       }
       this._lazyWriter = new DeferredTask(writeCommit, LAZY_SERIALIZE_DELAY);
     }
-    LOG("epsCommit: (re)setting timer");
+    LOG("metadata _commit: (re)setting timer");
     this._lazyWriter.start();
   },
   _lazyWriter: null

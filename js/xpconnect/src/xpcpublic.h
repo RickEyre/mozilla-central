@@ -25,11 +25,13 @@
 #include "mozilla/dom/DOMJSClass.h"
 #include "nsMathUtils.h"
 #include "nsStringBuffer.h"
+#include "nsIGlobalObject.h"
 #include "mozilla/dom/BindingDeclarations.h"
 
 class nsIPrincipal;
 class nsIXPConnectWrappedJS;
 class nsScriptNameSpaceManager;
+class nsIGlobalObject;
 
 #ifndef BAD_TLS_INDEX
 #define BAD_TLS_INDEX ((uint32_t) -1)
@@ -49,6 +51,10 @@ TransplantObjectWithWrapper(JSContext *cx,
 //
 // The return value is not wrapped into cx->compartment, so be sure to enter
 // its compartment before doing anything meaningful.
+//
+// Also note that XBL scopes are lazily created, so the return-value should be
+// null-checked unless the caller can ensure that the scope must already
+// exist.
 JSObject *
 GetXBLScope(JSContext *cx, JSObject *contentScope);
 
@@ -357,6 +363,7 @@ bool StringToJsval(JSContext* cx, mozilla::dom::DOMString& str,
 }
 
 nsIPrincipal *GetCompartmentPrincipal(JSCompartment *compartment);
+nsIPrincipal *GetObjectPrincipal(JSObject *obj);
 
 bool IsXBLScope(JSCompartment *compartment);
 
@@ -386,8 +393,40 @@ bool
 DOM_DefineQuickStubs(JSContext *cx, JSObject *proto, uint32_t flags,
                      uint32_t interfaceCount, const nsIID **interfaceArray);
 
+
+// ReportJSRuntimeExplicitTreeStats will expect this in the |extra| member
+// of JS::ZoneStats.
+class ZoneStatsExtras {
+public:
+    ZoneStatsExtras()
+    {}
+
+    nsAutoCString pathPrefix;
+
+private:
+    ZoneStatsExtras(const ZoneStatsExtras &other) MOZ_DELETE;
+    ZoneStatsExtras& operator=(const ZoneStatsExtras &other) MOZ_DELETE;
+};
+
+// ReportJSRuntimeExplicitTreeStats will expect this in the |extra| member
+// of JS::CompartmentStats.
+class CompartmentStatsExtras {
+public:
+    CompartmentStatsExtras()
+    {}
+
+    nsAutoCString jsPathPrefix;
+    nsAutoCString domPathPrefix;
+
+private:
+    CompartmentStatsExtras(const CompartmentStatsExtras &other) MOZ_DELETE;
+    CompartmentStatsExtras& operator=(const CompartmentStatsExtras &other) MOZ_DELETE;
+};
+
 // This reports all the stats in |rtStats| that belong in the "explicit" tree,
 // (which isn't all of them).
+// @see ZoneStatsExtras
+// @see CompartmentStatsExtras
 nsresult
 ReportJSRuntimeExplicitTreeStats(const JS::RuntimeStats &rtStats,
                                  const nsACString &rtPath,
@@ -400,10 +439,44 @@ ReportJSRuntimeExplicitTreeStats(const JS::RuntimeStats &rtStats,
 bool
 Throw(JSContext *cx, nsresult rv);
 
+/**
+ * Every global should hold a native that implements the nsIGlobalObject interface.
+ */
+nsIGlobalObject *
+GetNativeForGlobal(JSObject *global);
+
+/**
+ * In some cases a native object does not really belong to any compartment (XBL,
+ * document created from by XHR of a worker, etc.). But when for some reason we
+ * have to wrap these natives (because of an event for example) instead of just
+ * wrapping them into some random compartment we find on the context stack (like
+ * we did previously) a default compartment is used. This function returns that
+ * compartment's global. It is a singleton on the runtime.
+ * If you find yourself wanting to use this compartment, you're probably doing
+ * something wrong. Callers MUST consult with the XPConnect module owner before
+ * using this compartment. If you don't, bholley will hunt you down.
+ */
+JSObject *
+GetJunkScope();
 } // namespace xpc
 
 nsCycleCollectionParticipant *
 xpc_JSZoneParticipant();
+
+// This API is for internal use only and should _not_ be used without approval
+// by the XPConnect Module Owner. Consumers who want to push/pop contexts
+// should go through one of the RAII classes (nsCxPusher, or one of the
+// convenience wrappers defined in nsContentUtils.h).
+namespace xpc {
+namespace danger {
+
+NS_EXPORT_(bool) PushJSContext(JSContext *aCx);
+NS_EXPORT_(void) PopJSContext();
+
+bool IsJSContextOnStack(JSContext *aCx);
+
+} /* namespace danger */
+} /* namespace xpc */
 
 namespace mozilla {
 namespace dom {
@@ -424,7 +497,11 @@ inline bool IsDOMProxy(JSObject *obj)
 }
 
 typedef JSObject*
-(*DefineInterface)(JSContext *cx, JSObject *global, jsid id, bool *enabled);
+(*DefineInterface)(JSContext *cx, JS::Handle<JSObject*> global,
+                   JS::Handle<jsid> id, bool *enabled);
+
+typedef JSObject*
+(*ConstructNavigatorProperty)(JSContext *cx, JS::Handle<JSObject*> naviObj);
 
 typedef bool
 (*PrefEnabled)();

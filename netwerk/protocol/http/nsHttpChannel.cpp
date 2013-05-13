@@ -15,6 +15,7 @@
 #include "nsIStringBundle.h"
 #include "nsIStreamListenerTee.h"
 #include "nsISeekableStream.h"
+#include "nsILoadGroupChild.h"
 #include "nsMimeTypes.h"
 #include "nsNetUtil.h"
 #include "prprf.h"
@@ -370,12 +371,12 @@ nsHttpChannel::Connect()
         uint32_t flags = mPrivateBrowsing ? nsISocketProvider::NO_PERMANENT_STORAGE : 0;
         rv = stss->IsStsURI(mURI, flags, &isStsHost);
 
-        // if STS fails, there's no reason to cancel the load, but it's
-        // worrisome.
-        NS_ASSERTION(NS_SUCCEEDED(rv),
-                     "Something is wrong with STS: IsStsURI failed.");
+        // if the URI check fails, it's likely because this load is on a
+        // malformed URI or something else in the setup is wrong, so any error
+        // should be reported.
+        NS_ENSURE_SUCCESS(rv, rv);
 
-        if (NS_SUCCEEDED(rv) && isStsHost) {
+        if (isStsHost) {
             LOG(("nsHttpChannel::Connect() STS permissions found\n"));
             return AsyncCall(&nsHttpChannel::HandleAsyncRedirectChannelToHttps);
         }
@@ -684,23 +685,20 @@ nsHttpChannel::SetupTransactionLoadGroupInfo()
     // Find the loadgroup at the end of the chain in order
     // to make sure all channels derived from the load group
     // use the same connection scope.
-    nsCOMPtr<nsILoadGroup> rootLoadGroup = mLoadGroup;
-    while (rootLoadGroup) {
-        nsCOMPtr<nsILoadGroup> tmp;
-        rootLoadGroup->GetLoadGroup(getter_AddRefs(tmp));
-        if (tmp)
-            rootLoadGroup.swap(tmp);
-        else
-            break;
-    }
+    nsCOMPtr<nsILoadGroupChild> childLoadGroup = do_QueryInterface(mLoadGroup);
+    if (!childLoadGroup)
+        return;
+
+    nsCOMPtr<nsILoadGroup> rootLoadGroup;
+    childLoadGroup->GetRootLoadGroup(getter_AddRefs(rootLoadGroup));
+    if (!rootLoadGroup)
+        return;
 
     // Set the load group connection scope on the transaction
-    if (rootLoadGroup) {
-        nsCOMPtr<nsILoadGroupConnectionInfo> ci;
-        rootLoadGroup->GetConnectionInfo(getter_AddRefs(ci));
-        if (ci)
-            mTransaction->SetLoadGroupConnectionInfo(ci);
-    }
+    nsCOMPtr<nsILoadGroupConnectionInfo> ci;
+    rootLoadGroup->GetConnectionInfo(getter_AddRefs(ci));
+    if (ci)
+        mTransaction->SetLoadGroupConnectionInfo(ci);
 }
 
 nsresult
@@ -1931,7 +1929,7 @@ nsHttpChannel::EnsureAssocReq()
         return NS_OK;
     
     // check the method
-    int32_t methodlen = PL_strlen(mRequestHead.Method().get());
+    int32_t methodlen = strlen(mRequestHead.Method().get());
     if ((methodlen != (endofmethod - method)) ||
         PL_strncmp(method,
                    mRequestHead.Method().get(),
@@ -4399,7 +4397,6 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
     // that to complete would mean we don't include proxy resolution in the
     // timing.
     mAsyncOpenTime = TimeStamp::Now();
-    mCacheEffectExperimentAsyncOpenTime = mAsyncOpenTime;
 
     // the only time we would already know the proxy information at this
     // point would be if we were proxying a non-http protocol like ftp
@@ -4518,8 +4515,7 @@ nsHttpChannel::BeginConnect()
     if (mLoadFlags & LOAD_FRESH_CONNECTION) {
         // just the initial document resets the whole pool
         if (mLoadFlags & LOAD_INITIAL_DOCUMENT_URI) {
-            gHttpHandler->ConnMgr()->ClosePersistentConnections();
-            gHttpHandler->ConnMgr()->ResetIPFamillyPreference(mConnectionInfo);
+            gHttpHandler->ConnMgr()->DoShiftReloadConnectionCleanup(mConnectionInfo);
         }
         // each sub resource gets a fresh connection
         mCaps &= ~(NS_HTTP_ALLOW_KEEPALIVE | NS_HTTP_ALLOW_PIPELINING);
@@ -5105,15 +5101,7 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
     CleanRedirectCacheChainIfNecessary();
 
     ReleaseListeners();
-
-    // If enabled, record the cache effect experiment data
-    if (NS_SUCCEEDED(status) && contentComplete && !mCanceled) {
-        Telemetry::ID telemID = gHttpHandler->mCacheEffectExperimentTelemetryID;
-        if (telemID != nsHttpHandler::kNullTelemetryID) {
-            Telemetry::AccumulateTimeDelta(telemID,
-                                           mCacheEffectExperimentAsyncOpenTime);
-        }
-    }
+    
     return NS_OK;
 }
 

@@ -14,6 +14,7 @@
 #include "mozilla/dom/BindingUtils.h"
 
 using namespace mozilla;
+using namespace JS;
 
 extern const char* xpc_qsStringTable;
 
@@ -94,12 +95,12 @@ PointerFinalize(JSFreeOp *fop, JSObject *obj)
 JSClass
 PointerHolderClass = {
     "Pointer", JSCLASS_HAS_PRIVATE,
-    JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub,
+    JS_PropertyStub, JS_DeletePropertyStub, JS_PropertyStub, JS_StrictPropertyStub,
     JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, PointerFinalize
 };
 
 JSBool
-xpc_qsDefineQuickStubs(JSContext *cx, JSObject *proto, unsigned flags,
+xpc_qsDefineQuickStubs(JSContext *cx, JSObject *protoArg, unsigned flags,
                        uint32_t ifacec, const nsIID **interfaces,
                        uint32_t tableSize, const xpc_qsHashEntry *table,
                        const xpc_qsPropertySpec *propspecs,
@@ -114,7 +115,7 @@ xpc_qsDefineQuickStubs(JSContext *cx, JSObject *proto, unsigned flags,
      * searching the interfaces forward.  Here, definitions toward the
      * front of 'interfaces' overwrite those toward the back.
      */
-    bool definedProperty = false;
+    RootedObject proto(cx, protoArg);
     for (uint32_t i = ifacec; i-- != 0;) {
         const nsID &iid = *interfaces[i];
         const xpc_qsHashEntry *entry =
@@ -126,7 +127,6 @@ xpc_qsDefineQuickStubs(JSContext *cx, JSObject *proto, unsigned flags,
                 const xpc_qsPropertySpec *ps = propspecs + entry->prop_index;
                 const xpc_qsPropertySpec *ps_end = ps + entry->n_props;
                 for ( ; ps < ps_end; ++ps) {
-                    definedProperty = true;
                     if (!JS_DefineProperty(cx, proto,
                                            stringTable + ps->name_index,
                                            JSVAL_VOID,
@@ -213,18 +213,18 @@ GetMemberInfo(JSObject *obj, jsid memberId, const char **ifaceName)
 static void
 GetMethodInfo(JSContext *cx, jsval *vp, const char **ifaceNamep, jsid *memberIdp)
 {
-    JSObject *funobj = JSVAL_TO_OBJECT(JS_CALLEE(cx, vp));
+    RootedObject funobj(cx, JSVAL_TO_OBJECT(JS_CALLEE(cx, vp)));
     NS_ASSERTION(JS_ObjectIsFunction(cx, funobj),
                  "JSNative callee should be Function object");
-    JSString *str = JS_GetFunctionId(JS_GetObjectFunction(funobj));
-    jsid methodId = str ? INTERNED_STRING_TO_JSID(cx, str) : JSID_VOID;
+    RootedString str(cx, JS_GetFunctionId(JS_GetObjectFunction(funobj)));
+    RootedId methodId(cx, str ? INTERNED_STRING_TO_JSID(cx, str) : JSID_VOID);
     GetMemberInfo(JSVAL_TO_OBJECT(vp[1]), methodId, ifaceNamep);
     *memberIdp = methodId;
 }
 
 static bool
 ThrowCallFailed(JSContext *cx, nsresult rv,
-                const char *ifaceName, jsid memberId, const char *memberName)
+                const char *ifaceName, HandleId memberId, const char *memberName)
 {
     /* Only one of memberId or memberName should be given. */
     MOZ_ASSERT(JSID_IS_VOID(memberId) != !memberName);
@@ -275,17 +275,19 @@ ThrowCallFailed(JSContext *cx, nsresult rv,
 
 JSBool
 xpc_qsThrowGetterSetterFailed(JSContext *cx, nsresult rv, JSObject *obj,
-                              jsid memberId)
+                              jsid memberIdArg)
 {
+    RootedId memberId(cx, memberIdArg);
     const char *ifaceName;
     GetMemberInfo(obj, memberId, &ifaceName);
     return ThrowCallFailed(cx, rv, ifaceName, memberId, NULL);
 }
 
 JSBool
-xpc_qsThrowGetterSetterFailed(JSContext *cx, nsresult rv, JSObject *obj,
+xpc_qsThrowGetterSetterFailed(JSContext *cx, nsresult rv, JSObject *objArg,
                               const char* memberName)
 {
+    RootedObject obj(cx, objArg);
     JSString *str = JS_InternString(cx, memberName);
     if (!str) {
         return false;
@@ -306,8 +308,8 @@ JSBool
 xpc_qsThrowMethodFailed(JSContext *cx, nsresult rv, jsval *vp)
 {
     const char *ifaceName;
-    jsid memberId;
-    GetMethodInfo(cx, vp, &ifaceName, &memberId);
+    RootedId memberId(cx);
+    GetMethodInfo(cx, vp, &ifaceName, memberId.address());
     return ThrowCallFailed(cx, rv, ifaceName, memberId, NULL);
 }
 
@@ -323,7 +325,7 @@ xpc_qsThrowMethodFailedWithDetails(JSContext *cx, nsresult rv,
                                    const char *ifaceName,
                                    const char *memberName)
 {
-    return ThrowCallFailed(cx, rv, ifaceName, JSID_VOID, memberName);
+    return ThrowCallFailed(cx, rv, ifaceName, JSID_VOIDHANDLE, memberName);
 }
 
 static void
@@ -359,8 +361,8 @@ void
 xpc_qsThrowBadArg(JSContext *cx, nsresult rv, jsval *vp, unsigned paramnum)
 {
     const char *ifaceName;
-    jsid memberId;
-    GetMethodInfo(cx, vp, &ifaceName, &memberId);
+    RootedId memberId(cx);
+    GetMethodInfo(cx, vp, &ifaceName, memberId.address());
     ThrowBadArg(cx, rv, ifaceName, memberId, NULL, paramnum);
 }
 
@@ -379,8 +381,9 @@ xpc_qsThrowBadArgWithDetails(JSContext *cx, nsresult rv, unsigned paramnum,
 
 void
 xpc_qsThrowBadSetterValue(JSContext *cx, nsresult rv,
-                          JSObject *obj, jsid propId)
+                          JSObject *obj, jsid propIdArg)
 {
+    RootedId propId(cx, propIdArg);
     const char *ifaceName;
     GetMemberInfo(obj, propId, &ifaceName);
     ThrowBadArg(cx, rv, ifaceName, propId, NULL, 0);
@@ -388,8 +391,9 @@ xpc_qsThrowBadSetterValue(JSContext *cx, nsresult rv,
 
 void
 xpc_qsThrowBadSetterValue(JSContext *cx, nsresult rv,
-                          JSObject *obj, const char* propName)
+                          JSObject *objArg, const char* propName)
 {
+    RootedObject obj(cx, objArg);
     JSString *str = JS_InternString(cx, propName);
     if (!str) {
         return;
@@ -496,7 +500,7 @@ xpc_qsAUTF8String::xpc_qsAUTF8String(JSContext *cx, jsval v, jsval *pval)
 static nsresult
 getNative(nsISupports *idobj,
           QITableEntry* entries,
-          JSObject *obj,
+          HandleObject obj,
           const nsIID &iid,
           void **ppThis,
           nsISupports **pThisRef,
@@ -529,8 +533,9 @@ getNativeFromWrapper(JSContext *cx,
                      nsISupports **pThisRef,
                      jsval *vp)
 {
+    RootedObject obj(cx, wrapper->GetFlatJSObject());
     return getNative(wrapper->GetIdentityObject(), wrapper->GetOffsets(),
-                     wrapper->GetFlatJSObject(), iid, ppThis, pThisRef, vp);
+                     obj, iid, ppThis, pThisRef, vp);
 }
 
 
@@ -547,9 +552,9 @@ getWrapper(JSContext *cx,
     // * A (possible) outer window
     //
     // If we pass stopAtOuter == false, we can handle all three with one call
-    // to js::UnwrapObjectChecked.
+    // to js::CheckedUnwrap.
     if (js::IsWrapper(obj)) {
-        obj = js::UnwrapObjectChecked(obj, /* stopAtOuter = */ false);
+        obj = js::CheckedUnwrap(obj, /* stopAtOuter = */ false);
 
         // The safe unwrap might have failed if we encountered an object that
         // we're not allowed to unwrap. If it didn't fail though, we should be
@@ -597,7 +602,7 @@ getWrapper(JSContext *cx,
 nsresult
 castNative(JSContext *cx,
            XPCWrappedNative *wrapper,
-           JSObject *cur,
+           JSObject *curArg,
            XPCWrappedNativeTearOff *tearoff,
            const nsIID &iid,
            void **ppThis,
@@ -605,6 +610,7 @@ castNative(JSContext *cx,
            jsval *vp,
            XPCLazyCallContext *lccx)
 {
+    RootedObject cur(cx, curArg);
     if (wrapper) {
         nsresult rv = getNativeFromWrapper(cx,wrapper, iid, ppThis, pThisRef,
                                            vp);
@@ -655,9 +661,9 @@ xpc_qsUnwrapThisFromCcxImpl(XPCCallContext &ccx,
     if (!native)
         return xpc_qsThrow(ccx.GetJSContext(), NS_ERROR_XPC_HAS_BEEN_SHUTDOWN);
 
+    RootedObject obj(ccx, ccx.GetFlattenedJSObject());
     nsresult rv = getNative(native, GetOffsets(native, ccx.GetProto()),
-                            ccx.GetFlattenedJSObject(), iid, ppThis, pThisRef,
-                            vp);
+                            obj, iid, ppThis, pThisRef, vp);
     if (NS_FAILED(rv))
         return xpc_qsThrow(ccx.GetJSContext(), rv);
     return true;
@@ -672,7 +678,7 @@ xpc_qsUnwrapArgImpl(JSContext *cx,
                     jsval *vp)
 {
     nsresult rv;
-    JSObject *src = xpc_qsUnwrapObj(v, ppArgRef, &rv);
+    RootedObject src(cx, xpc_qsUnwrapObj(v, ppArgRef, &rv));
     if (!src) {
         *ppArg = nullptr;
 

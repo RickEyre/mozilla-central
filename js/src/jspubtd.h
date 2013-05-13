@@ -1,5 +1,5 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- *
+ * vim: set ts=8 sts=4 et sw=4 tw=99:
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -13,7 +13,6 @@
 
 #include "jsprototypes.h"
 #include "jstypes.h"
-
 
 namespace JS {
 
@@ -45,8 +44,6 @@ struct Zone;
  * oblivious to the change. This feature can be explicitly disabled in debug
  * builds by defining JS_NO_JSVAL_JSID_STRUCT_TYPES.
  */
-#ifdef __cplusplus
-
 # if defined(DEBUG) && !defined(JS_NO_JSVAL_JSID_STRUCT_TYPES)
 #  define JS_USE_JSID_STRUCT_TYPES
 # endif
@@ -63,10 +60,6 @@ struct jsid
 typedef ptrdiff_t jsid;
 #  define JSID_BITS(id) (id)
 # endif  /* defined(JS_USE_JSID_STRUCT_TYPES) */
-#else  /* defined(__cplusplus) */
-typedef ptrdiff_t jsid;
-# define JSID_BITS(id) (id)
-#endif
 
 #ifdef WIN32
 typedef wchar_t   jschar;
@@ -75,9 +68,9 @@ typedef uint16_t  jschar;
 #endif
 
 /*
- * Run-time version enumeration.  See jsversion.h for compile-time counterparts
- * to these values that may be selected by the JS_VERSION macro, and tested by
- * #if expressions.
+ * Run-time version enumeration.  For compile-time version checking, please use
+ * the JS_HAS_* macros in jsversion.h, or use MOZJS_MAJOR_VERSION,
+ * MOZJS_MINOR_VERSION, MOZJS_PATCH_VERSION, and MOZJS_ALPHA definitions.
  */
 typedef enum JSVersion {
     JSVERSION_ECMA_3  = 148,
@@ -190,20 +183,12 @@ typedef struct JSStructuredCloneReader      JSStructuredCloneReader;
 typedef struct JSStructuredCloneWriter      JSStructuredCloneWriter;
 typedef struct JSTracer                     JSTracer;
 
-#ifdef __cplusplus
 class                                       JSFlatString;
 class                                       JSFunction;
 class                                       JSObject;
 class                                       JSScript;
 class                                       JSStableString;  // long story
 class                                       JSString;
-#else
-typedef struct JSFlatString                 JSFlatString;
-typedef struct JSFunction                   JSFunction;
-typedef struct JSObject                     JSObject;
-typedef struct JSScript                     JSScript;
-typedef struct JSString                     JSString;
-#endif /* !__cplusplus */
 
 #ifdef JS_THREADSAFE
 typedef struct PRCallOnceType    JSCallOnceType;
@@ -211,8 +196,6 @@ typedef struct PRCallOnceType    JSCallOnceType;
 typedef JSBool                   JSCallOnceType;
 #endif
 typedef JSBool                 (*JSInitCallback)(void);
-
-#ifdef __cplusplus
 
 namespace JS {
 namespace shadow {
@@ -222,7 +205,19 @@ struct Runtime
     /* Restrict zone access during Minor GC. */
     bool needsBarrier_;
 
-    Runtime() : needsBarrier_(false) {}
+#ifdef JSGC_GENERATIONAL
+    /* Allow inlining of Nursery::isInside. */
+    uintptr_t gcNurseryStart_;
+    uintptr_t gcNurseryEnd_;
+#endif
+
+    Runtime()
+      : needsBarrier_(false)
+#ifdef JSGC_GENERATIONAL
+      , gcNurseryStart_(0)
+      , gcNurseryEnd_(0)
+#endif
+    {}
 };
 
 } /* namespace shadow */
@@ -248,6 +243,7 @@ enum ThingRootKind
     THING_ROOT_VALUE,
     THING_ROOT_TYPE,
     THING_ROOT_BINDINGS,
+    THING_ROOT_PROPERTY_DESCRIPTOR,
     THING_ROOT_LIMIT
 };
 
@@ -266,6 +262,7 @@ struct SpecificRootKind
 };
 
 template <> struct RootKind<JSObject *> : SpecificRootKind<JSObject *, THING_ROOT_OBJECT> {};
+template <> struct RootKind<JSFlatString *> : SpecificRootKind<JSFlatString *, THING_ROOT_STRING> {};
 template <> struct RootKind<JSFunction *> : SpecificRootKind<JSFunction *, THING_ROOT_OBJECT> {};
 template <> struct RootKind<JSString *> : SpecificRootKind<JSString *, THING_ROOT_STRING> {};
 template <> struct RootKind<JSScript *> : SpecificRootKind<JSScript *, THING_ROOT_SCRIPT> {};
@@ -382,7 +379,5 @@ struct PerThreadDataFriendFields
 };
 
 } /* namespace js */
-
-#endif /* __cplusplus */
 
 #endif /* jspubtd_h___ */
