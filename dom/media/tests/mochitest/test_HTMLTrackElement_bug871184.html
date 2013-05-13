@@ -1,0 +1,59 @@
+<!DOCTYPE HTML>
+<html>
+<!--
+https://bugzilla.mozilla.org/show_bug.cgi?id=871184
+-->
+<head>
+	<title>Test for Bug 871184 - HTMLTrackElement</title>
+	<script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+	<script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+	<script type="text/javascript" src="/tests/content/html/content/test/reflect.js"></script>
+	<link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"/>
+</head>
+<body>
+<div id="videoDiv">
+<video id ="videoElement" controls>
+	<source src="/tests/content/media/test/seek.webm" type="video/webm" preload="auto" autobuffer/>
+</video>
+</div>
+	<pre id="test">
+	<script class="testbody" type="text/javascript">
+	var videoDiv = document.getElementById("videoDiv");
+  var videoElement = document.getElementById("videoElement");
+	SimpleTest.waitForExplicitFinish();
+	// Verify WebVTT support
+	var WebvttEnabled = undefined;
+	try{
+	  WebvttEnabled = SpecialPowers.getBoolPref("media.webvtt.enabled");
+	} catch (ex){
+		// SpecialPowers failed, perhaps because WebVTT isn't compiled in
+		console.log("media.webvtt.enabled pref not found; skipping WebVTT validation");
+	}
+	if (WebvttEnabled !== undefined) {
+	  // Testing with the pref set to True
+	  SpecialPowers.setBoolPref("media.webvtt.enabled", true);
+	  var HTMLTrackElement = document.createElement("track");
+    videoElement.appendChild(HTMLTrackElement);
+    HTMLTrackElement.setAttribute("kind", "SUBTITLES");
+    is(HTMLTrackElement.kind, "subtitles");
+    HTMLTrackElement.setAttribute("kind", "CAPTIONS");
+    is(HTMLTrackElement.kind, "captions");
+    HTMLTrackElement.setAttribute("kind", "CHAPTERS");
+    is(HTMLTrackElement.kind, "chapters");
+    HTMLTrackElement.setAttribute("kind", "DESCRIPTIONS");
+    is(HTMLTrackElement.kind, "descriptions");
+    HTMLTrackElement.setAttribute("kind", "METADATA");
+    is(HTMLTrackElement.kind, "metadata");
+    videoElement.removeChild(HTMLTrackElement);
+	}else{
+	  //If media.webvtt.enabled pref doesn't exist
+	  var HTMLTrackElement = document.createElement("track");
+    videoElement.appendChild(HTMLTrackElement);
+    is(HTMLTrackElement.kind, undefined);
+    videoElement.removeChild(HTMLTrackElement);
+	}
+	SimpleTest.finish();
+	</script>
+	</pre>	
+</body>
+</html>
