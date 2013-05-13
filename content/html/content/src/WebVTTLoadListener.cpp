@@ -17,7 +17,6 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(WebVTTLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
   NS_INTERFACE_MAP_ENTRY(nsIChannelEventSink)
   NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
-  NS_INTERFACE_MAP_ENTRY(nsIObserver)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIStreamListener)
 NS_INTERFACE_MAP_END
 
@@ -86,18 +85,6 @@ WebVTTLoadListener::LoadResource()
 }
 
 NS_IMETHODIMP
-WebVTTLoadListener::Observe(nsISupports* aSubject,
-                            const char *aTopic,
-                            const PRUnichar* aData)
-{
-  if (strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID) == 0) {
-    nsContentUtils::UnregisterShutdownObserver(this);
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 WebVTTLoadListener::OnStartRequest(nsIRequest* aRequest,
                                    nsISupports* aContext)
 {
@@ -109,10 +96,7 @@ WebVTTLoadListener::OnStopRequest(nsIRequest* aRequest,
                                   nsISupports* aContext,
                                   nsresult aStatus)
 {
-  nsContentUtils::UnregisterShutdownObserver(this);
-  
   webvtt_finish_parsing( mParser );
-  
   return NS_OK;
 }
 

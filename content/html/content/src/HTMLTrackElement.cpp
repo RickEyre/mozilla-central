@@ -207,8 +207,6 @@ HTMLTrackElement::LoadResource(nsIURI* aURI)
 
   mChannel = channel;
 
-  nsContentUtils::RegisterShutdownObserver(mLoadListener);
-
   return NS_OK;
 }
 

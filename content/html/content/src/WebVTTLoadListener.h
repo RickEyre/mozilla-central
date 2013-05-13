@@ -28,14 +28,12 @@ namespace dom {
 
 class WebVTTLoadListener MOZ_FINAL : public nsIStreamListener,
                                      public nsIChannelEventSink,
-                                     public nsIInterfaceRequestor,
-                                     public nsIObserver
+                                     public nsIInterfaceRequestor
 {
   NS_DECL_CYCLE_COLLECTING_ISUPPORTS
   NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSICHANNELEVENTSINK
-  NS_DECL_NSIOBSERVER
   NS_DECL_NSIINTERFACEREQUESTOR
 
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(WebVTTLoadListener,
