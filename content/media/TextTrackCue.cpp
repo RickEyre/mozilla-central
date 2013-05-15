@@ -131,122 +131,137 @@ TextTrackCue::GetCueAsHTML()
     return nullptr;
   }
 
-  for (webvtt_uint i = 0; i < mHead->data.internal_data->length; i++) {
-    nsCOMPtr<nsIContent> cueTextContent = ConvertNodeToCueTextContent(
-                                  mHead->data.internal_data->children[i]);
-    if (!cueTextContent) {
-      return nullptr;
-    }
-
-    nsCOMPtr<nsINode> contentNode = do_QueryInterface(cueTextContent);
-    if (!contentNode) {
-      return nullptr;
-    }
-
-    nsINode *fragNode = frag;
-    fragNode->AppendChild(*contentNode, rv);
-  }
+  ConvertNodeToCueTextContent(frag);
 
   return frag.forget();
 }
 
-// TODO: Change to iterative solution instead of recursive
 nsCOMPtr<nsIContent>
-TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
+TextTrackCue::ConvertNodeToCueTextContent(nsIContent *parentContent)
 {
-  nsCOMPtr<nsIContent> cueTextContent;
-  nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
+  nsTArray<webvtt_node *> nodeStack;
+  nsTArray<uint16_t> childCountStack;
+  nsCOMPtr<nsIContent> content;
 
-  if (WEBVTT_IS_VALID_INTERNAL_NODE(aWebVTTNode->kind))
-  {
-    nsIAtom *atomName;
-    switch (aWebVTTNode->kind) {
-      case WEBVTT_BOLD:
-        atomName = nsGkAtoms::b;
-        break;
-      case WEBVTT_ITALIC:
-        atomName = nsGkAtoms::i;
-        break;
-      case WEBVTT_UNDERLINE:
-        atomName = nsGkAtoms::u;
-        break;
-      case WEBVTT_RUBY:
-        atomName = nsGkAtoms::ruby;
-        break;
-      case WEBVTT_RUBY_TEXT:
-        atomName = nsGkAtoms::rt;
-        break;
-      case WEBVTT_VOICE:
-      {
-        atomName = nsGkAtoms::span;
-        break;
-      case WEBVTT_CLASS:
-        atomName = nsGkAtoms::span;
-        break;
+  nodeStack.AppendElement(mHead);
+
+  webvtt_node *node;
+  while (nodeStack.Length() > 0) {
+    node = nodeStack[nodeStack.Length() - 1];
+    nodeStack.RemoveElement[nodeStack.Length() - 1];
+
+    if (WEBVTT_IS_VALID_LEAF_NODE(node)) {
+      content = ConvertLeafNodeToContent(node);
+    } else if (WEBVTT_IS_VALID_INTERNAL_NODE(node)) {
+      content = ConvertInternalNodeToContent(node);
+
+      uint16_t childCount = node->data.internal_data->length;
+      for (uint16_t i = childCount; i > 0; i--) {
+        nodeStack.AppendElement(node->data.internal_data->children[i]);
       }
-      default:
-        return nullptr;
-        break;
-    }
-    nsCOMPtr<nsINodeInfo> nodeInfo =
-                          nimgr->GetNodeInfo(atomName, nullptr,
-                                             kNameSpaceID_XHTML,
-                                             nsIDOMNode::ELEMENT_NODE);
-
-    NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo.forget(),
-                      mozilla::dom::NOT_FROM_PARSER);
-
-    if (aWebVTTNode->kind == WEBVTT_VOICE) {
-      nsCOMPtr<nsGenericHTMLElement> genericHtmlElement =
-        do_QueryInterface(cueTextContent);
-
-      if (genericHtmlElement) {
-        const char* text =
-            webvtt_string_text(&aWebVTTNode->data.internal_data->annotation);
-        genericHtmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
-      }
-    }
-
-    webvtt_stringlist *classes = aWebVTTNode->data.internal_data->css_classes;
-    if (classes && classes->length > 0) {
-      nsAutoString classString;
-      const char *text;
-
-      text = webvtt_string_text(classes->items);
-      classString.Append(NS_ConvertUTF8toUTF16(text));
-
-      for (webvtt_uint i = 1; i < classes->length; i++) {
-        classString.Append(NS_LITERAL_STRING(" "));
-        text = webvtt_string_text(classes->items + i);
-        classString.Append(NS_ConvertUTF8toUTF16(text));
-      }
-
-      nsCOMPtr<nsGenericHTMLElement> genericHtmlElement =
-        do_QueryInterface(cueTextContent);
-      if (genericHtmlElement) {
-        genericHtmlElement->SetClassName(classString);
+      if (childCount > 0) {
+        childCountStack.AppendElement(childCount);
       }
     }
 
     ErrorResult rv;
-    for (webvtt_uint i = 0; i < aWebVTTNode->data.internal_data->length; i++) {
-      nsCOMPtr<nsIContent> childCueTextContent = ConvertNodeToCueTextContent(
-        aWebVTTNode->data.internal_data->children[i]);
+    nsCOMPtr<nsINode> childNode = do_QueryInterface(content);
+    nsCOMPtr<nsINode> parentNode = do_QueryInterface(parentContent);
+    if (childNode && parentNode) {
+      parentNode->AppendChild(*childNode, rv);
+    }
 
-      if (childCueTextContent) {
-        nsCOMPtr<nsINode> childNode = do_QueryInterface(childCueTextContent);
-        nsCOMPtr<nsINode> htmlElement = do_QueryInterface(cueTextContent);
-        if (childNode && htmlElement) {
-          htmlElement->AppendChild(*childNode, rv);
-        }
+    if ((nodeStack.Length() - Top(childCountStack)) == 0) {
+      nsCOMPtr<nsIContent> temp = parentContent.GetParent();
+      if (temp) {
+        parentContent = temp;
       }
+      childCountStack.RemoveElement(childCountStack.Length() - 1);
     }
   }
-  else if (WEBVTT_IS_VALID_LEAF_NODE(aWebVTTNode->kind))
-  {
-    switch (aWebVTTNode->kind) {
+
+  return parentContent;
+}
+
+nsCOMPtr<nsIContent>
+TextTrackCue::ConvertInternalNodeToContent( const webvtt_node *aWebVTTNode )
+{
+  nsIAtom *atomName;
+  switch (aWebVTTNode->kind) {
+    case WEBVTT_BOLD:
+      atomName = nsGkAtoms::b;
+      break;
+    case WEBVTT_ITALIC:
+      atomName = nsGkAtoms::i;
+      break;
+    case WEBVTT_UNDERLINE:
+      atomName = nsGkAtoms::u;
+      break;
+    case WEBVTT_RUBY:
+      atomName = nsGkAtoms::ruby;
+      break;
+    case WEBVTT_RUBY_TEXT:
+      atomName = nsGkAtoms::rt;
+      break;
+    case WEBVTT_VOICE:
+    {
+      atomName = nsGkAtoms::span;
+      break;
+    case WEBVTT_CLASS:
+      atomName = nsGkAtoms::span;
+      break;
+    }
+    default:
+      return nullptr;
+      break;
+  }
+  nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
+  nsCOMPtr<nsINodeInfo> nodeInfo = nimgr->GetNodeInfo(atomName, nullptr,
+                                                      kNameSpaceID_XHTML,
+                                                      nsIDOMNode::ELEMENT_NODE);
+
+  nsCOMPtr<nsIContent> cueTextContent;
+  NS_NewHTMLElement(getter_AddRefs(cueTextContent), nodeInfo.forget(),
+                    mozilla::dom::NOT_FROM_PARSER);
+
+  nsCOMPtr<nsGenericHTMLElement> genericHtmlElement;
+  const char *text;
+  if (aWebVTTNode->kind == WEBVTT_VOICE) {
+    genericHtmlElement = do_QueryInterface(cueTextContent);
+
+    if (genericHtmlElement) {
+      text = webvtt_string_text(&aWebVTTNode->data.internal_data->annotation);
+      genericHtmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
+    }
+  }
+
+  webvtt_stringlist *classes = aWebVTTNode->data.internal_data->css_classes;
+  if (classes && classes->length > 0) {
+    nsAutoString classString;
+
+    text = webvtt_string_text(classes->items);
+    classString.Append(NS_ConvertUTF8toUTF16(text));
+
+    for (uint32_t i = 1; i < classes->length; i++) {
+      classString.Append(NS_LITERAL_STRING("."));
+      text = webvtt_string_text(classes->items + i);
+      classString.Append(NS_ConvertUTF8toUTF16(text));
+    }
+
+    genericHtmlElement = do_QueryInterface(cueTextContent);
+    if (genericHtmlElement) {
+      genericHtmlElement->SetClassName(classString);
+    }
+  }
+}
+
+nsCOMPtr<nsIContent>
+TextTrackCue::ConvertLeafNodeToContent( webvtt_node *aWebVTTNode )
+{
+  switch (aWebVTTNode->kind) {
       case WEBVTT_TEXT:
       {
+        nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
         NS_NewTextNode(getter_AddRefs(cueTextContent), nimgr);
 
         if (!cueTextContent) {
@@ -271,9 +286,6 @@ TextTrackCue::ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode)
         return nullptr;
         break;
     }
-  }
-
-  return cueTextContent;
 }
 
 JSObject*

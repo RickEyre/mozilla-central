@@ -273,7 +273,13 @@ public:
    * Returns the anonymous content that was constructed based on aWebVTTNode.
    */
   nsCOMPtr<nsIContent>
-  ConvertNodeToCueTextContent(const webvtt_node *aWebVTTNode);
+  ConvertNodeToContent(const webvtt_node *aWebVTTNode);
+
+  nsCOMPtr<nsIContent>
+  ConvertInternalNodeToContent( const webvtt_node *aWebVTTNode );
+
+  nsCOMPtr<nsIContent>
+  ConvertLeafNodeToContent( const webvtt_node *aWebVTTNode );
 
   IMPL_EVENT_HANDLER(enter)
   IMPL_EVENT_HANDLER(exit)
