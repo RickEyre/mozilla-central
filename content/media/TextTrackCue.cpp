@@ -140,7 +140,7 @@ nsCOMPtr<nsIContent>
 TextTrackCue::ConvertNodeToCueTextContent(nsIContent *parentContent)
 {
   nsTArray<webvtt_node *> nodeStack;
-  nsTArray<uint16_t> childCountStack;
+  nsTArray<uint16_t> countStack;
   nsCOMPtr<nsIContent> content;
 
   nodeStack.AppendElement(mHead);
@@ -160,7 +160,7 @@ TextTrackCue::ConvertNodeToCueTextContent(nsIContent *parentContent)
         nodeStack.AppendElement(node->data.internal_data->children[i]);
       }
       if (childCount > 0) {
-        childCountStack.AppendElement(childCount);
+        countStack.AppendElement(childCount);
       }
     }
 
@@ -171,12 +171,13 @@ TextTrackCue::ConvertNodeToCueTextContent(nsIContent *parentContent)
       parentNode->AppendChild(*childNode, rv);
     }
 
-    if ((nodeStack.Length() - Top(childCountStack)) == 0) {
+    if ((nodeStack.Length() - countStack[countStack.Length() - 1]) == 
+         countStack[countStack.Length() - 1]) {
       nsCOMPtr<nsIContent> temp = parentContent.GetParent();
       if (temp) {
         parentContent = temp;
       }
-      childCountStack.RemoveElement(childCountStack.Length() - 1);
+      countStack.RemoveElement(countStack.Length() - 1);
     }
   }
 
