@@ -268,12 +268,10 @@ public:
   already_AddRefed<DocumentFragment> GetCueAsHTML();
 
   /**
-   * Converts aWebVTTNode to the appropriate anonymous DOM object.
-   *
-   * Returns the anonymous content that was constructed based on aWebVTTNode.
+   * Converts mHead to a list of DOM elements and attaches it to aParentContent.
    */
-  nsCOMPtr<nsIContent>
-  ConvertNodeToContent(const webvtt_node *aWebVTTNode);
+  void
+  ConvertNodeTreeToDOMTree(nsIContent *aParentContent);
 
   nsCOMPtr<nsIContent>
   ConvertInternalNodeToContent( const webvtt_node *aWebVTTNode );

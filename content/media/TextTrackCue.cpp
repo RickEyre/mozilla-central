@@ -9,6 +9,7 @@
 #include "nsIFrame.h"
 #include "nsVideoFrame.h"
 #include "webvtt/string.h"
+#include "nsTArray.h"
 
 namespace mozilla {
 namespace dom {
@@ -131,15 +132,15 @@ TextTrackCue::GetCueAsHTML()
     return nullptr;
   }
 
-  ConvertNodeToCueTextContent(frag);
+  ConvertNodeTreeToDOMTree(frag);
 
   return frag.forget();
 }
 
-nsCOMPtr<nsIContent>
-TextTrackCue::ConvertNodeToCueTextContent(nsIContent *parentContent)
+void
+TextTrackCue::ConvertNodeTreeToDOMTree(nsIContent *parentContent)
 {
-  nsTArray<webvtt_node *> nodeStack;
+  nsTArray<webvtt_node*> nodeStack;
   nsTArray<uint16_t> countStack;
   nsCOMPtr<nsIContent> content;
 
@@ -148,11 +149,11 @@ TextTrackCue::ConvertNodeToCueTextContent(nsIContent *parentContent)
   webvtt_node *node;
   while (nodeStack.Length() > 0) {
     node = nodeStack[nodeStack.Length() - 1];
-    nodeStack.RemoveElement[nodeStack.Length() - 1];
+    nodeStack.RemoveElementAt(nodeStack.Length() - 1);
 
-    if (WEBVTT_IS_VALID_LEAF_NODE(node)) {
+    if (WEBVTT_IS_VALID_LEAF_NODE(node->kind)) {
       content = ConvertLeafNodeToContent(node);
-    } else if (WEBVTT_IS_VALID_INTERNAL_NODE(node)) {
+    } else if (WEBVTT_IS_VALID_INTERNAL_NODE(node->kind)) {
       content = ConvertInternalNodeToContent(node);
 
       uint16_t childCount = node->data.internal_data->length;
@@ -173,15 +174,13 @@ TextTrackCue::ConvertNodeToCueTextContent(nsIContent *parentContent)
 
     if ((nodeStack.Length() - countStack[countStack.Length() - 1]) == 
          countStack[countStack.Length() - 1]) {
-      nsCOMPtr<nsIContent> temp = parentContent.GetParent();
+      nsCOMPtr<nsIContent> temp = parentContent->GetParent();
       if (temp) {
         parentContent = temp;
       }
-      countStack.RemoveElement(countStack.Length() - 1);
+      countStack.RemoveElementAt(countStack.Length() - 1);
     }
   }
-
-  return parentContent;
 }
 
 nsCOMPtr<nsIContent>
@@ -254,15 +253,18 @@ TextTrackCue::ConvertInternalNodeToContent( const webvtt_node *aWebVTTNode )
       genericHtmlElement->SetClassName(classString);
     }
   }
+
+  return cueTextContent;
 }
 
 nsCOMPtr<nsIContent>
-TextTrackCue::ConvertLeafNodeToContent( webvtt_node *aWebVTTNode )
+TextTrackCue::ConvertLeafNodeToContent( const webvtt_node *aWebVTTNode )
 {
+  nsCOMPtr<nsIContent> cueTextContent;
+  nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
   switch (aWebVTTNode->kind) {
       case WEBVTT_TEXT:
       {
-        nsNodeInfoManager *nimgr = mTrackElement->NodeInfo()->NodeInfoManager();
         NS_NewTextNode(getter_AddRefs(cueTextContent), nimgr);
 
         if (!cueTextContent) {
@@ -286,7 +288,8 @@ TextTrackCue::ConvertLeafNodeToContent( webvtt_node *aWebVTTNode )
       default:
         return nullptr;
         break;
-    }
+  }
+  return cueTextContent;
 }
 
 JSObject*
