@@ -82,4 +82,5 @@ EXPORTS.mozilla.dom += [
     'TextTrackCueList.h',
     'TextTrackList.h',
     'VideoStreamTrack.h',
+    'WebVTTLoadListener.h'
 ]

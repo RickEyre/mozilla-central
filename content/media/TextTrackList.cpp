@@ -21,6 +21,15 @@ TextTrackList::TextTrackList(nsISupports* aGlobal) : mGlobal(aGlobal)
   SetIsDOMBinding();
 }
 
+void
+TextTrackList::Update(double time)
+{
+  uint32_t length = Length(), i;
+  for( i = 0; i < length; i++ ) {
+    mTextTracks[i]->Update(time);
+  }
+}
+
 JSObject*
 TextTrackList::WrapObject(JSContext* aCx, JS::Handle<JSObject*> aScope)
 {

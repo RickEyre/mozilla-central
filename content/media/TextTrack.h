@@ -82,6 +82,7 @@ public:
     return mActiveCueList;
   }
 
+  // Time is in seconds.
   void Update(double time);
 
   void AddCue(TextTrackCue& aCue);

@@ -43,6 +43,7 @@ CPPSRCS = \
   VideoSegment.cpp \
   VideoStreamTrack.cpp \
   VideoUtils.cpp \
+  WebVTTLoadListener.cpp \
   $(NULL)
 
 FORCE_STATIC_LIB = 1

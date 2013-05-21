@@ -6,3 +6,5 @@
 
 MODULE = 'layout'
 
+EXPORTS += ['nsBox.h']
+

@@ -19,7 +19,8 @@
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIHttpChannel.h"
-#include "webvtt/node.h"
+
+namespace mozilla { namespace dom { class WebVTTLoadListener; } }
 
 namespace mozilla {
 namespace dom {
@@ -129,18 +130,25 @@ public:
                               bool aCompileEventHandlers) MOZ_OVERRIDE;
   virtual void UnbindFromTree(bool aDeep, bool aNullParent) MOZ_OVERRIDE;
 
-  void DisplayCueText(webvtt_node* head);
-
   // Check enabling preference.
   static bool IsWebVTTEnabled();
+
+  nsresult SetAcceptHeader(nsIHttpChannel* aChannel);
 
 protected:
   virtual JSObject* WrapNode(JSContext* aCx,
                              JS::Handle<JSObject*> aScope) MOZ_OVERRIDE;
+  nsresult OnChannelRedirect(nsIChannel* aChannel, nsIChannel* aNewChannel,
+                             uint32_t aFlags);
+  nsresult LoadResource(nsIURI* aURI);
+
+  friend class TextTrackCue;
+  friend class mozilla::dom::WebVTTLoadListener;
 
   nsRefPtr<TextTrack> mTrack;
   nsCOMPtr<nsIChannel> mChannel;
   nsRefPtr<HTMLMediaElement> mMediaParent;
+  nsRefPtr<mozilla::dom::WebVTTLoadListener> mLoadListener;
   uint16_t mReadyState;
 
   void CreateTextTrack();
