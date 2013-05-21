@@ -20,10 +20,11 @@
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIHttpChannel.h"
-#include "webvtt/node.h"
 
 namespace mozilla {
 namespace dom {
+
+class WebVTTLoadListener;
 
 class HTMLTrackElement MOZ_FINAL : public nsGenericHTMLElement
                                  , public nsIDOMHTMLElement
@@ -130,18 +131,25 @@ public:
                               bool aCompileEventHandlers) MOZ_OVERRIDE;
   virtual void UnbindFromTree(bool aDeep, bool aNullParent) MOZ_OVERRIDE;
 
-  void DisplayCueText(webvtt_node* head);
-
   // Check enabling preference.
   static bool IsWebVTTEnabled();
 
 protected:
   virtual JSObject* WrapNode(JSContext* aCx,
                              JS::Handle<JSObject*> aScope) MOZ_OVERRIDE;
+  void OnChannelRedirect(nsIChannel* aChannel, nsIChannel* aNewChannel,
+                         uint32_t aFlags);
+  // Will open a new channel for the specified URI as well as load
+  // the HTMLTrackElement's WebVTTLoadListener.
+  nsresult LoadResource(nsIURI* aURI);
+
+  friend class TextTrackCue;
+  friend class WebVTTLoadListener;
 
   nsRefPtr<TextTrack> mTrack;
   nsCOMPtr<nsIChannel> mChannel;
   nsRefPtr<HTMLMediaElement> mMediaParent;
+  nsRefPtr<WebVTTLoadListener> mLoadListener;
   uint16_t mReadyState;
 
   void CreateTextTrack();
