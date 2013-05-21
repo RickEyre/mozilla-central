@@ -30,7 +30,7 @@ TextTrackCueList::Update(double time)
   const uint32_t length = mList.Length();
   for (uint32_t i = 0; i < length; i++) {
     if (time > mList[i]->StartTime() && time < mList[i]->EndTime()) {
-      mList[i]->DisplayCue();
+      mList[i]->RenderCue();
     }
   }
 }

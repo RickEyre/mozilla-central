@@ -581,3 +581,4 @@ webvtt_delete_parser
 webvtt_parse_chunk
 webvtt_ref_node
 webvtt_release_node
+webvtt_finish_parsing
