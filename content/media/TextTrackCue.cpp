@@ -85,7 +85,7 @@ TextTrackCue::~TextTrackCue()
 void
 TextTrackCue::CreateCueOverlay()
 {
-  nsNodeInfoManager *nodeInfoManager =
+  nsNodeInfoManager* nodeInfoManager =
     mTrackElement->NodeInfo()->NodeInfoManager();
   nsCOMPtr<nsINodeInfo> nodeInfo =
     nodeInfoManager->GetNodeInfo(nsGkAtoms::div, nullptr, kNameSpaceID_XHTML,
@@ -109,8 +109,7 @@ TextTrackCue::RenderCue()
     return;
   }
 
-  HTMLMediaElement* parent =
-      static_cast<HTMLMediaElement*>(mTrackElement->mMediaParent.get());
+  HTMLMediaElement* parent = mTrackElement->mMediaParent.get();
   if (!parent) {
     return;
   }
@@ -153,52 +152,58 @@ TextTrackCue::GetCueAsHTML()
   return frag.forget();
 }
 
-struct StackInfo {
+struct WebVTTNodeParentPair {
   webvtt_node* node;
   nsIContent* parent;
 
-  StackInfo(webvtt_node* aNode, nsIContent* aParent)
+  WebVTTNodeParentPair(webvtt_node* aNode, nsIContent* aParent)
     : node(aNode)
     , parent(aParent)
     {}
 };
 
 void
+PopulateNodeParentPairStack(nsDeque* aNodeParentPairStack,
+                            webvtt_node* aNode,
+                            nsIContent* aParentContent)
+{
+  // Push on in reverse order so we process the nodes in the correct
+  // order -- left to right.
+  for (int i = aNode->data.internal_data->length; i > 0; i--) {
+    aNodeParentPairStack.Push((void*)new WebVTTNodeParentPair(
+      aNode->data.internal_data->children[i - 1], aParentContent));
+  }
+}
+
+void
 TextTrackCue::ConvertNodeTreeToDOMTree(nsIContent* aParentContent)
 {
-  nsDeque nodeStack;
+  nsDeque nodeParentPairStack;
 
   // mHead should actually be the head of a node tree.
   if (mHead->kind != WEBVTT_HEAD_NODE) {
     return;
   }
-  // Push the children of mHead onto the stack. If we don't do this
-  // ConvertInternalNodeToContent() will return null when passed mHead and the
-  // tree will not be processed properly.
-  for (int i = mHead->data.internal_data->length; i > 0; i--) {
-    nodeStack.Push((void*)new StackInfo(
-      mHead->data.internal_data->children[i - 1], aParentContent));
-  }
+  // Populate stack for traversal.
+  PopulateNodeParentPairStack(nodeParentPairStack, mHead, aParentContent);
 
   while (nodeStack.GetSize() > 0) {
     nsCOMPtr<nsIContent> content;
-    nsAutoPtr<StackInfo> stackInfo((StackInfo*)nodeStack.Pop());
-    if (WEBVTT_IS_VALID_LEAF_NODE(stackInfo->node->kind)) {
-      content = ConvertLeafNodeToContent(stackInfo->node);
-    } else if (WEBVTT_IS_VALID_INTERNAL_NODE(stackInfo->node->kind)) {
-      content = ConvertInternalNodeToContent(stackInfo->node);
-
-      // Push on in reverse order so we process the nodes in the correct
-      // order -- left to right.
-      for (int i = stackInfo->node->data.internal_data->length; i > 0; i--) {
-        nodeStack.Push((void*)new StackInfo(
-          stackInfo->node->data.internal_data->children[i - 1], content));
-      }
+    nsAutoPtr<WebVTTNodeParentPair> nodeParentPair(
+      (WebVTTNodeParentPair*)nodeStack.Pop());
+    if (WEBVTT_IS_VALID_LEAF_NODE(nodeParentPair->node->kind)) {
+      content = ConvertLeafNodeToContent(nodeParentPair->node);
+    } else if (WEBVTT_IS_VALID_INTERNAL_NODE(nodeParentPair->node->kind)) {
+      content = ConvertInternalNodeToContent(nodeParentPair->node);
+      // Push the children of the node onto the stack for traversal.
+      PopulateNodeParentPairStack(nodeParentPairStack,
+                                  nodeParentPair->node,
+                                  nodeParentPair->parent);
     }
-    if (content && stackInfo->parent) {
+    if (content && nodeParentPair->parent) {
       ErrorResult rv;
       nsCOMPtr<nsINode> childNode = do_QueryInterface(content);
-      nsCOMPtr<nsINode> parentNode = do_QueryInterface(stackInfo->parent);
+      nsCOMPtr<nsINode> parentNode = do_QueryInterface(nodeParentPair->parent);
       if (childNode && parentNode) {
         parentNode->AppendChild(*childNode, rv);
       }

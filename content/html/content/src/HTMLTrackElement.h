@@ -20,10 +20,10 @@
 #include "nsIDOMEventTarget.h"
 #include "nsIHttpChannel.h"
 
-namespace mozilla { namespace dom { class WebVTTLoadListener; } }
-
 namespace mozilla {
 namespace dom {
+
+class WebVTTLoadListener;
 
 class HTMLTrackElement MOZ_FINAL : public nsGenericHTMLElement
                                  , public nsIDOMHTMLElement

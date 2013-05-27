@@ -224,8 +224,9 @@ WebVTTLoadListener::OnReportError(uint32_t aLine, uint32_t aCol,
   nsAutoCString file = NS_ConvertUTF16toUTF8(autoString);
 
   const char* error = "parser error";
-  if( aError >= 0 )
+  if( aError >= 0 ) {
     error = webvtt_strerror(aError);
+  }
 
   LOG("error: %s(%d:%d) - %s\n", file.get(), aLine, aCol, error);
 #endif
