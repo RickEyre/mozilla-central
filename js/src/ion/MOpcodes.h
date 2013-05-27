@@ -107,6 +107,7 @@ namespace ion {
     _(GetPropertyPolymorphic)                                               \
     _(SetPropertyPolymorphic)                                               \
     _(GetElementCache)                                                      \
+    _(SetElementCache)                                                      \
     _(BindNameCache)                                                        \
     _(GuardShape)                                                           \
     _(GuardObjectType)                                                      \
@@ -154,7 +155,6 @@ namespace ion {
     _(StringLength)                                                         \
     _(ArgumentsLength)                                                      \
     _(GetArgument)                                                          \
-    _(RunOncePrologue)                                                      \
     _(Rest)                                                                 \
     _(Floor)                                                                \
     _(Round)                                                                \

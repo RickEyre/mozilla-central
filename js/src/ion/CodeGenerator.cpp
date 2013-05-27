@@ -23,6 +23,7 @@
 #include "builtin/Eval.h"
 #include "gc/Nursery.h"
 #include "vm/ForkJoin.h"
+#include "ParallelArrayAnalysis.h"
 
 #include "vm/StringObject-inl.h"
 
@@ -1493,26 +1494,8 @@ static const VMFunction GetIntrinsicValueInfo =
 bool
 CodeGenerator::visitCallGetIntrinsicValue(LCallGetIntrinsicValue *lir)
 {
-    // When compiling parallel kernels, always bail.
-    switch (gen->info().executionMode()) {
-      case SequentialExecution: {
-        pushArg(ImmGCPtr(lir->mir()->name()));
-        return callVM(GetIntrinsicValueInfo, lir);
-      }
-
-      case ParallelExecution: {
-        OutOfLineParallelAbort *bail = oolParallelAbort(ParallelBailoutAccessToIntrinsic, lir);
-        if (!bail)
-            return false;
-
-        masm.jump(bail->entry());
-        return true;
-      }
-
-      default:
-        JS_NOT_REACHED("Bad execution mode");
-        return false;
-    }
+    pushArg(ImmGCPtr(lir->mir()->name()));
+    return callVM(GetIntrinsicValueInfo, lir);
 }
 
 typedef bool (*InvokeFunctionFn)(JSContext *, HandleFunction, uint32_t, Value *, Value *);
@@ -2806,7 +2789,7 @@ CodeGenerator::visitNewDeclEnvObject(LNewDeclEnvObject *lir)
     return true;
 }
 
-typedef JSObject *(*NewCallObjectFn)(JSContext *, HandleScript, HandleShape,
+typedef JSObject *(*NewCallObjectFn)(JSContext *, HandleShape,
                                      HandleTypeObject, HeapSlot *);
 static const VMFunction NewCallObjectInfo =
     FunctionInfo<NewCallObjectFn>(NewCallObject);
@@ -2822,33 +2805,25 @@ CodeGenerator::visitNewCallObject(LNewCallObject *lir)
     OutOfLineCode *ool;
     if (lir->slots()->isRegister()) {
         ool = oolCallVM(NewCallObjectInfo, lir,
-                        (ArgList(), ImmGCPtr(lir->mir()->block()->info().script()),
-                                    ImmGCPtr(templateObj->lastProperty()),
-                                    ImmGCPtr(templateObj->hasLazyType() ? NULL : templateObj->type()),
+                        (ArgList(), ImmGCPtr(templateObj->lastProperty()),
+                                    ImmGCPtr(templateObj->type()),
                                     ToRegister(lir->slots())),
                         StoreRegisterTo(obj));
     } else {
         ool = oolCallVM(NewCallObjectInfo, lir,
-                        (ArgList(), ImmGCPtr(lir->mir()->block()->info().script()),
-                                    ImmGCPtr(templateObj->lastProperty()),
-                                    ImmGCPtr(templateObj->hasLazyType() ? NULL : templateObj->type()),
+                        (ArgList(), ImmGCPtr(templateObj->lastProperty()),
+                                    ImmGCPtr(templateObj->type()),
                                     ImmWord((void *)NULL)),
                         StoreRegisterTo(obj));
     }
     if (!ool)
         return false;
 
-    if (lir->mir()->needsSingletonType()) {
-        // Objects can only be given singleton types in VM calls.
-        masm.jump(ool->entry());
-    } else {
-        masm.newGCThing(obj, templateObj, ool->entry());
-        masm.initGCThing(obj, templateObj);
+    masm.newGCThing(obj, templateObj, ool->entry());
+    masm.initGCThing(obj, templateObj);
 
-        if (lir->slots()->isRegister())
-            masm.storePtr(ToRegister(lir->slots()), Address(obj, JSObject::offsetOfSlots()));
-    }
-
+    if (lir->slots()->isRegister())
+        masm.storePtr(ToRegister(lir->slots()), Address(obj, JSObject::offsetOfSlots()));
     masm.bind(ool->rejoin());
     return true;
 }
@@ -5015,17 +4990,6 @@ CodeGenerator::visitGetArgument(LGetArgument *lir)
     return true;
 }
 
-typedef bool (*RunOnceScriptPrologueFn)(JSContext *, HandleScript);
-static const VMFunction RunOnceScriptPrologueInfo =
-    FunctionInfo<RunOnceScriptPrologueFn>(js::RunOnceScriptPrologue);
-
-bool
-CodeGenerator::visitRunOncePrologue(LRunOncePrologue *lir)
-{
-    pushArg(ImmGCPtr(lir->mir()->block()->info().script()));
-    return callVM(RunOnceScriptPrologueInfo, lir);
-}
-
 bool
 CodeGenerator::emitRest(LInstruction *lir, Register array, Register numActuals,
                         Register temp0, Register temp1, unsigned numFormals,
@@ -5229,13 +5193,19 @@ CodeGenerator::link()
     if (cx->compartment->types.compiledInfo.compilerOutput(cx)->isInvalidated())
         return true;
 
+    // List of possible scripts that this graph may call. Currently this is
+    // only tracked when compiling for parallel execution.
+    CallTargetVector callTargets;
+    if (executionMode == ParallelExecution)
+        AddPossibleCallees(graph.mir(), callTargets);
+
     IonScript *ionScript =
       IonScript::New(cx, graph.totalSlotCount(), scriptFrameSize, snapshots_.size(),
                      bailouts_.length(), graph.numConstants(),
                      safepointIndices_.length(), osiIndices_.length(),
                      cacheList_.length(), runtimeData_.length(),
                      safepoints_.size(), graph.mir().numScripts(),
-                     graph.mir().numCallTargets());
+                     callTargets.length());
 
     ionScript->setMethod(code);
     ionScript->setSkipArgCheckEntryOffset(getSkipArgCheckEntryOffset());
@@ -5245,6 +5215,12 @@ CodeGenerator::link()
         ionScript->setHasSPSInstrumentation();
 
     SetIonScript(script, executionMode, ionScript);
+
+    // In parallel execution mode, when we first compile a script, we
+    // don't know that its potential callees are compiled, so set a
+    // flag warning that the callees may not be fully compiled.
+    if (callTargets.length() != 0)
+        ionScript->setHasUncompiledCallTarget();
 
     if (!ionScript)
         return false;
@@ -5293,8 +5269,8 @@ CodeGenerator::link()
 #endif
     JS_ASSERT(graph.mir().numScripts() > 0);
     ionScript->copyScriptEntries(graph.mir().scripts());
-    if (graph.mir().numCallTargets() > 0)
-        ionScript->copyCallTargetEntries(graph.mir().callTargets());
+    if (callTargets.length() > 0)
+        ionScript->copyCallTargetEntries(callTargets.begin());
 
     // The correct state for prebarriers is unknown until the end of compilation,
     // since a GC can occur during code generation. All barriers are emitted
@@ -5672,6 +5648,59 @@ CodeGenerator::visitGetElementIC(OutOfLineUpdateCache *ool, GetElementIC *ic)
 }
 
 bool
+CodeGenerator::visitSetElementCacheV(LSetElementCacheV *ins)
+{
+    Register obj = ToRegister(ins->object());
+    Register temp = ToRegister(ins->temp());
+    ValueOperand index = ToValue(ins, LSetElementCacheV::Index);
+    ConstantOrRegister value = TypedOrValueRegister(ToValue(ins, LSetElementCacheV::Value));
+
+    SetElementIC cache(obj, temp, index, value, ins->mir()->strict());
+
+    return addCache(ins, allocateCache(cache));
+}
+
+bool
+CodeGenerator::visitSetElementCacheT(LSetElementCacheT *ins)
+{
+    Register obj = ToRegister(ins->object());
+    Register temp = ToRegister(ins->temp());
+    ValueOperand index = ToValue(ins, LSetElementCacheT::Index);
+    ConstantOrRegister value;
+    const LAllocation *tmp = ins->value();
+    if (tmp->isConstant())
+        value = *tmp->toConstant();
+    else
+        value = TypedOrValueRegister(ins->mir()->value()->type(), ToAnyRegister(tmp));
+
+    SetElementIC cache(obj, temp, index, value, ins->mir()->strict());
+
+    return addCache(ins, allocateCache(cache));
+}
+
+typedef bool (*SetElementICFn)(JSContext *, size_t, HandleObject, HandleValue, HandleValue);
+const VMFunction SetElementIC::UpdateInfo =
+    FunctionInfo<SetElementICFn>(SetElementIC::update);
+
+bool
+CodeGenerator::visitSetElementIC(OutOfLineUpdateCache *ool, SetElementIC *ic)
+{
+    LInstruction *lir = ool->lir();
+    saveLive(lir);
+
+    pushArg(ic->value());
+    pushArg(ic->index());
+    pushArg(ic->object());
+    pushArg(Imm32(ool->getCacheIndex()));
+    if (!callVM(SetElementIC::UpdateInfo, lir))
+        return false;
+    restoreLive(lir);
+
+    masm.jump(ool->rejoin());
+    return true;
+}
+
+bool
 CodeGenerator::visitBindNameCache(LBindNameCache *ins)
 {
     Register scopeChain = ToRegister(ins->scopeChain());
@@ -5703,7 +5732,7 @@ CodeGenerator::visitBindNameIC(OutOfLineUpdateCache *ool, BindNameIC *ic)
 }
 
 typedef bool (*SetPropertyFn)(JSContext *, HandleObject,
-                              HandlePropertyName, const HandleValue, bool, int);
+                              HandlePropertyName, const HandleValue, bool, bool);
 static const VMFunction SetPropertyInfo =
     FunctionInfo<SetPropertyFn>(SetProperty);
 
@@ -5713,9 +5742,10 @@ CodeGenerator::visitCallSetProperty(LCallSetProperty *ins)
     ConstantOrRegister value = TypedOrValueRegister(ToValue(ins, LCallSetProperty::Value));
 
     const Register objReg = ToRegister(ins->getOperand(0));
-    JSOp op = JSOp(*ins->mir()->resumePoint()->pc());
+    jsbytecode *pc = ins->mir()->resumePoint()->pc();
+    bool isSetName = JSOp(*pc) == JSOP_SETNAME || JSOp(*pc) == JSOP_SETGNAME;
 
-    pushArg(Imm32(op));
+    pushArg(Imm32(isSetName));
     pushArg(Imm32(ins->mir()->strict()));
 
     pushArg(value);

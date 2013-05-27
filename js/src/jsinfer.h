@@ -395,14 +395,8 @@ enum {
     /* Whether any objects emulate undefined; see EmulatesUndefined. */
     OBJECT_FLAG_EMULATES_UNDEFINED    = 0x00400000,
 
-    /*
-     * For the function on a run-once script, whether the function has actually
-     * run multiple times.
-     */
-    OBJECT_FLAG_RUNONCE_INVALIDATED   = 0x00800000,
-
     /* Flags which indicate dynamic properties of represented objects. */
-    OBJECT_FLAG_DYNAMIC_MASK          = 0x00ff0000,
+    OBJECT_FLAG_DYNAMIC_MASK          = 0x007f0000,
 
     /*
      * Whether all properties of this object are considered unknown.
@@ -1362,12 +1356,6 @@ struct TypeCompartment
 
     /* Pending recompilations to perform before execution of JIT code can resume. */
     Vector<RecompileInfo> *pendingRecompiles;
-
-    /*
-     * Worklist of the current transitive compilation for parallel
-     * execution. Otherwise NULL.
-     */
-    AutoScriptVector *transitiveCompilationWorklist;
 
     /*
      * Number of recompilation events and inline frame expansions that have
