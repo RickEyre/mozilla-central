@@ -119,7 +119,7 @@ TextTrackCue::RenderCue()
     return;
   }
 
-  nsIContent *overlay = static_cast<nsVideoFrame*>(frame)->GetCaptionOverlay();
+  nsIContent *overlay = do_QueryFrame((frame)->GetCaptionOverlay());
   nsCOMPtr<nsINode> div = do_QueryInterface(overlay);
   nsCOMPtr<nsINode> cueDiv = do_QueryInterface(mCueDiv);
 
@@ -152,14 +152,15 @@ TextTrackCue::GetCueAsHTML()
   return frag.forget();
 }
 
-struct WebVTTNodeParentPair {
+struct WebVTTNodeParentPair
+{
   webvtt_node* node;
   nsIContent* parent;
 
   WebVTTNodeParentPair(webvtt_node* aNode, nsIContent* aParent)
     : node(aNode)
     , parent(aParent)
-    {}
+  {}
 };
 
 void
@@ -252,12 +253,12 @@ TextTrackCue::ConvertInternalNodeToContent(const webvtt_node* aWebVTTNode)
                     mozilla::dom::NOT_FROM_PARSER);
 
   nsCOMPtr<nsGenericHTMLElement> genericHtmlElement;
-  const char* text;
   if (aWebVTTNode->kind == WEBVTT_VOICE) {
     genericHtmlElement = do_QueryInterface(cueTextContent);
 
     if (genericHtmlElement) {
-      text = webvtt_string_text(&aWebVTTNode->data.internal_data->annotation);
+      const char* text =
+        webvtt_string_text(&aWebVTTNode->data.internal_data->annotation);
       if (text) {
         genericHtmlElement->SetTitle(NS_ConvertUTF8toUTF16(text));
       }
@@ -268,7 +269,7 @@ TextTrackCue::ConvertInternalNodeToContent(const webvtt_node* aWebVTTNode)
   if (classes && classes->length > 0) {
     nsAutoString classString;
 
-    text = webvtt_string_text(classes->items);
+    const char* text = webvtt_string_text(classes->items);
     if (text) {
       classString.Append(NS_ConvertUTF8toUTF16(text));
     }
