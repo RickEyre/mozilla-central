@@ -1708,6 +1708,13 @@ const int32_t nsCSSProps::kColumnFillKTable[] = {
   eCSSKeyword_UNKNOWN, -1
 };
 
+const int32_t nsCSSProps::kWritingModeKTable[] = {
+  eCSSKeyword_horizontal_tb,  NS_STYLE_WRITING_MODE_HORIZONTAL_TB,
+  eCSSKeyword_vertical_lr,    NS_STYLE_WRITING_MODE_VERTICAL_LR,
+  eCSSKeyWord_vertical_rl,    NS_STYLE_WRITING_MODE_VERTICAL_RL,
+  eCSSKeyword_UNKNOWN,        -1
+};
+
 int32_t
 nsCSSProps::FindIndexOfKeyword(nsCSSKeyword aKeyword, const int32_t aTable[])
 {

@@ -542,6 +542,11 @@ static inline mozilla::css::Side operator++(mozilla::css::Side& side, int) {
 #define NS_STYLE_OVERFLOW_SCROLLBARS_HORIZONTAL 5
 #define NS_STYLE_OVERFLOW_SCROLLBARS_VERTICAL   6
 
+// See nsStyleWriting
+#define NS_STYLE_WRITING_MODE_HORIZONTAL_TB     0
+#define NS_STYLE_WRITING_MODE_VERTICAL_LR       1
+#define NS_STYLE_WRITING_MODE_VERTICAL_RL       2
+
 // See nsStyleList
 #define NS_STYLE_LIST_STYLE_NONE                  0
 #define NS_STYLE_LIST_STYLE_DISC                  1

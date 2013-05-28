@@ -1597,6 +1597,16 @@ CSS_PROP_POSITION(
     offsetof(nsStylePosition, mFlexBasis),
     eStyleAnimType_Coord)
 CSS_PROP_POSITION(
+    writing-mode,
+    writing_mode,
+    WritingMode,
+    CSS_PROPERTY_PARSE_VALUE,
+    "layout.css.vertical-text.enabled",
+    VARIANT_HK,
+    kWritingModeTable,
+    offsetof(nsStyleWriting, mWritingMode),
+    eStyleAnimType_EnumU8)
+CSS_PROP_POSITION(
     flex-direction,
     flex_direction,
     FlexDirection,
