@@ -726,12 +726,12 @@ audio:not([controls]) {
   -moz-transform: translate(0) !important;
 }
 
-video > div {
+.moz-caption-box  {
   position: relative;
   pointer-events: none;
 }
 
-video > div > div {
+.moz-caption-text {
   position: absolute;
   bottom: 24px;
   padding: 5px;
