@@ -1,0 +1,100 @@
+<!DOCTYPE HTML>
+<html>
+<!--
+https://bugzilla.mozilla.org/show_bug.cgi?id=833386
+-->
+<head>
+  <meta charset='utf-8'>
+  <title>Test for Bug 833386 - HTMLTrackElement</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <script type="text/javascript" src="/tests/content/html/content/test/reflect.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"/>
+</head>
+<body>
+<p id="display"></p>
+<div id="content">
+</div>
+<pre id="test">
+<script class="testbody" type="text/javascript">
+SimpleTest.waitForExplicitFinish();
+SpecialPowers.pushPrefEnv({"set": [["media.webvtt.enabled", true]]},
+  function() {
+    var video = document.createElement("video");
+    video.src = "./seek.webm";
+    var trackElement = document.createElement("track");
+    trackElement.src = "./basic.vtt";
+    trackElement.kind = "subtitles";
+    document.getElementById("content").appendChild(video);
+    video.appendChild(trackElement);
+    video.addEventListener("loadedmetadata",
+      function() {
+        var cueList = trackElement.track.cues;
+        is(cueList.length, 3, "Cue list length should be 3.");
+
+        // Check if first cue was parsed correctly.
+        var cue = cueList[0];
+        is(cue.id, "1", "Cue's ID should be 1.");
+        is(cue.startTime, 11, "Cue's start time should be 11.");
+        is(cue.endTime, 13, "Cue's end time should be 13.");
+        is(cue.pauseOnExit, false, "Cue's pause on exit flag should be false.");
+        is(cue.text, "<v Roger Bingham>We are in New York City", "Cue's text should be set correctly.");
+        todo_isnot(cue.track, undefined, "Cue's track should be defined.");
+
+        // Check that Cue setters are working correctly.
+        cue.id = "Cue 01";
+        is(cue.id, "Cue 01", "Cue's ID should be 'Cue 01'.");
+        cue.startTime = 10;
+        is(cue.startTime, 10, "Cue's start time should be 10.");
+        cue.endTime = 14;
+        is(cue.endTime, 14, "Cue's end time should be 14.");
+        cue.pauseOnExit = true;
+        is(cue.pauseOnExit, true, "Cue's pause on exit flag should be true.");
+
+        // Check that we can create and add new TextTrackCues
+        var textTrackCue = new TextTrackCue(10, 15, "foo");
+        trackElement.track.addCue(textTrackCue);
+        is(cueList.length, 4, "Cue list length should now be 4.");
+
+        // Check that new TestTrackCue was added correctly
+        cue = cueList[3];
+        is(cue.startTime, 10, "Cue's start time should be 10.");
+        is(cue.endTime, 15, "Cue's end time should be 15.");
+        is(cue.text, "foo", "Cue's text should be foo.");
+
+        // Adding the same cue again should not increase the cue count.
+        // TODO: https://bugzilla.mozilla.org/show_bug.cgi?id=867823
+        trackElement.track.addCue(textTrackCue);
+        todo_is(cueList.length, 4, "Cue list length should be 4.")
+
+        // Check that we are able to remove cues.
+        trackElement.track.removeCue(cue);
+        // TODO: Marked as todo as incorrect addition up top increases cue count
+        // to 4.
+        todo_is(cueList.length, 3, "Cue list length should be 3.");
+
+        // We should not be able to remove a cue that is not in the cue list.
+        try {
+          cue = new TextTrackCue(1, 2, "foo");
+          trackElement.removeCue(cue);
+        } catch (e) {
+          // How can we test this if exception wasn't thrown.. ?
+          // TODO: https://bugzilla.mozilla.org/show_bug.cgi?id=867823
+          todo_is(e.name, "NotFoundError", "We should have caught an error.");
+        }
+        // We should not have removed a cue so the cue list length should not
+        // have changed.
+        // TODO: Marked as todo as incorrect addition of cue up top increases
+        // count erroneously.
+        todo_is(cueList.length, 3, "Cue list length should be 3.");
+
+        SimpleTest.finish();
+      }
+    );
+  }
+);
+
+</script>
+</pre>
+</body>
+</html>

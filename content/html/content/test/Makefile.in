@@ -356,6 +356,8 @@ MOCHITEST_FILES = \
 		wakelock.ogg \
 		wakelock.ogv \
 		test_bug869040.html \
+		test_htmltrackelement_attributes_reflection.html \
+		test_htmltrackelement_disabled.html \
 		$(NULL)
 
 MOCHITEST_BROWSER_FILES = \
