@@ -1,0 +1,5 @@
+skip-if(B2G) == select-multiple.html select-multiple-ref.html
+== select-boguskids.html select-boguskids-ref.html
+== select-dynamic-boguskids.html select-boguskids-ref.html
+== select-option-children.html select-option-children-ref.html
+skip-if(B2G) == out-of-bounds-selectedindex.html out-of-bounds-selectedindex-ref.html # test for bug 471741

@@ -1,0 +1,3 @@
+asserts(2) == button-first-letter-1.html button-first-letter-1-ref.html
+asserts(1) != button-first-letter-1.html button-first-letter-1-noref.html
+== button-max-height.html button-max-height-ref.html

@@ -1,0 +1,7 @@
+== radio-label-dynamic.html radio-label-dynamic-ref.html
+!= radio-checked.html radio-checked-notref.html
+!= radio-checked-native.html radio-checked-native-notref.html
+!= radio-checked.html about:blank
+!= radio-checked-notref.html about:blank
+!= radio-checked-native.html about:blank
+!= radio-checked-native-notref.html about:blank
