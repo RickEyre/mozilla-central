@@ -10,6 +10,7 @@
 #include "mozilla/dom/TextTrackBinding.h"
 #include "mozilla/dom/TextTrackCue.h"
 #include "mozilla/dom/TextTrackCueList.h"
+#include "mozilla/dom/HTMLMediaElement.h"
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsDOMEventTargetHelper.h"
@@ -29,8 +30,10 @@ public:
   NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(TextTrack,
                                                          nsDOMEventTargetHelper)
 
-  TextTrack(nsISupports* aParent);
   TextTrack(nsISupports* aParent,
+            HTMLMediaElement* aMediaElement);
+  TextTrack(nsISupports* aParent,
+            HTMLMediaElement* aMediaElement,
             TextTrackKind aKind,
             const nsAString& aLabel,
             const nsAString& aLanguage);
@@ -74,13 +77,7 @@ public:
     return mCueList;
   }
 
-  TextTrackCueList* GetActiveCues() const
-  {
-    if (mMode == TextTrackMode::Disabled) {
-      return nullptr;
-    }
-    return mActiveCueList;
-  }
+  TextTrackCueList* GetActiveCues() const;
 
   // Time is in seconds.
   void Update(double aTime);
@@ -93,6 +90,7 @@ public:
 
 private:
   nsCOMPtr<nsISupports> mParent;
+  nsRefPtr<HTMLMediaElement> mMediaElement;
 
   TextTrackKind mKind;
   nsString mLabel;

@@ -10,8 +10,9 @@
 namespace mozilla {
 namespace dom {
 
-NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE_3(TextTrack,
+NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE_4(TextTrack,
                                         mParent,
+                                        mMediaElement,
                                         mCueList,
                                         mActiveCueList)
 
@@ -21,10 +22,12 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(TextTrack)
 NS_INTERFACE_MAP_END_INHERITING(nsDOMEventTargetHelper)
 
 TextTrack::TextTrack(nsISupports* aParent,
+                     HTMLMediaElement* aMediaElement,
                      TextTrackKind aKind,
                      const nsAString& aLabel,
                      const nsAString& aLanguage)
   : mParent(aParent)
+  , mMediaElement(aMediaElement)
   , mKind(aKind)
   , mLabel(aLabel)
   , mLanguage(aLanguage)
@@ -35,8 +38,9 @@ TextTrack::TextTrack(nsISupports* aParent,
   SetIsDOMBinding();
 }
 
-TextTrack::TextTrack(nsISupports* aParent)
+TextTrack::TextTrack(nsISupports* aParent, HTMLMediaElement* aMediaElement)
   : mParent(aParent)
+  , mMediaElement(aMediaElement)
   , mKind(TextTrackKind::Subtitles)
   , mMode(TextTrackMode::Disabled)
   , mCueList(new TextTrackCueList(aParent))
@@ -81,6 +85,15 @@ void
 TextTrack::CueChanged(TextTrackCue& aCue)
 {
   //XXX: Implement Cue changed. Bug 867823.
+}
+
+TextTrackCueList*
+TextTrack::GetActiveCues() const
+{
+  if (mMode == TextTrackMode::Disabled) {
+    return nullptr;
+  }
+  return mActiveCueList;
 }
 
 } // namespace dom

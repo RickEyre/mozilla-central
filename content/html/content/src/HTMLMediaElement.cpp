@@ -3774,7 +3774,7 @@ HTMLMediaElement::AddTextTrack(TextTrackKind aKind,
                                const nsAString& aLabel,
                                const nsAString& aLanguage)
 {
-  return mTextTracks->AddTextTrack(aKind, aLabel, aLanguage);
+  return mTextTracks->AddTextTrack(this, aKind, aLabel, aLanguage);
 }
 
 } // namespace dom

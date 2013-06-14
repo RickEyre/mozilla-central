@@ -43,7 +43,8 @@ public:
 
   TextTrack* IndexedGetter(uint32_t aIndex, bool& aFound);
 
-  already_AddRefed<TextTrack> AddTextTrack(TextTrackKind aKind,
+  already_AddRefed<TextTrack> AddTextTrack(HTMLMediaElement* aMediaElement,
+                                           TextTrackKind aKind,
                                            const nsAString& aLabel,
                                            const nsAString& aLanguage);
   void AddTextTrack(TextTrack* aTextTrack) {

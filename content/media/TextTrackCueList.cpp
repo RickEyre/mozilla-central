@@ -66,7 +66,13 @@ TextTrackCueList::GetCueById(const nsAString& aId)
 void
 TextTrackCueList::AddCue(TextTrackCue& aCue)
 {
-  mList.AppendElement(&aCue);
+  for (int32_t i = mList.Length() - 1; i >= 0; i--) {
+    if (aCue.StartTime() >= mList[i]->StartTime()) {
+      mList.InsertElementAt(i + 1, &aCue);
+      return;
+    }
+  }
+  mList.InsertElementAt(0, &aCue);
 }
 
 void
