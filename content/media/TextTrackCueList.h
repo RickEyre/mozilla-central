@@ -46,8 +46,8 @@ public:
   TextTrackCue* IndexedGetter(uint32_t aIndex, bool& aFound);
   TextTrackCue* GetCueById(const nsAString& aId);
 
-  void AddCue(TextTrackCue& cue);
-  void RemoveCue(TextTrackCue& cue);
+  void AddCue(TextTrackCue& aCue);
+  void RemoveCue(TextTrackCue& aCue);
 
 private:
   nsCOMPtr<nsISupports> mParent;

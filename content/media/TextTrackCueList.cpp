@@ -64,15 +64,15 @@ TextTrackCueList::GetCueById(const nsAString& aId)
 }
 
 void
-TextTrackCueList::AddCue(TextTrackCue& cue)
+TextTrackCueList::AddCue(TextTrackCue& aCue)
 {
-  mList.AppendElement(&cue);
+  mList.AppendElement(&aCue);
 }
 
 void
-TextTrackCueList::RemoveCue(TextTrackCue& cue)
+TextTrackCueList::RemoveCue(TextTrackCue& aCue)
 {
-  mList.RemoveElement(&cue);
+  mList.RemoveElement(&aCue);
 }
 
 } // namespace dom
