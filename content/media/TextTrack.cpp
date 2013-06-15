@@ -6,6 +6,7 @@
 
 #include "mozilla/dom/TextTrack.h"
 #include "mozilla/dom/TextTrackBinding.h"
+#include "mozilla/dom/HTMLMediaElement.h"
 
 namespace mozilla {
 namespace dom {
@@ -93,6 +94,7 @@ TextTrack::GetActiveCues() const
   if (mMode == TextTrackMode::Disabled) {
     return nullptr;
   }
+  
   return mActiveCueList;
 }
 

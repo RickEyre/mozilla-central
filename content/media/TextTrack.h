@@ -10,7 +10,6 @@
 #include "mozilla/dom/TextTrackBinding.h"
 #include "mozilla/dom/TextTrackCue.h"
 #include "mozilla/dom/TextTrackCueList.h"
-#include "mozilla/dom/HTMLMediaElement.h"
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsDOMEventTargetHelper.h"
@@ -22,6 +21,7 @@ namespace dom {
 
 class TextTrackCue;
 class TextTrackCueList;
+class HTMLMediaElement;
 
 class TextTrack MOZ_FINAL : public nsDOMEventTargetHelper
 {
