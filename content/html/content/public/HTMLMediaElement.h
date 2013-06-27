@@ -512,6 +512,8 @@ public:
     SetHTMLAttr(nsGkAtoms::mozaudiochannel, aValue, aRv);
   }
 
+  void RunInStableState(nsIRunnable* aRunnable);
+
   TextTrackList* TextTracks() const;
 
   already_AddRefed<TextTrack> AddTextTrack(TextTrackKind aKind,
