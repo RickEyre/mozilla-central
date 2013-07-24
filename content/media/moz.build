@@ -10,6 +10,8 @@ PARALLEL_DIRS += ['mediasource']
 
 PARALLEL_DIRS += ['webaudio']
 
+PARALLEL_DIRS += ['webvtt']
+
 if CONFIG['MOZ_RAW']:
     PARALLEL_DIRS += ['raw']
 
@@ -123,5 +125,5 @@ CPP_SOURCES += [
     'VideoSegment.cpp',
     'VideoStreamTrack.cpp',
     'VideoUtils.cpp',
-    'WebVTTLoadListener.cpp',
+    'WebVTTListener.cpp',
 ]

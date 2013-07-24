@@ -21,7 +21,7 @@
 namespace mozilla {
 namespace dom {
 
-class WebVTTLoadListener;
+class WebVTTListener;
 
 class HTMLTrackElement MOZ_FINAL : public nsGenericHTMLElement
                                  , public nsIDOMHTMLElement
@@ -145,17 +145,17 @@ protected:
   void OnChannelRedirect(nsIChannel* aChannel, nsIChannel* aNewChannel,
                          uint32_t aFlags);
   // Will open a new channel for the HTMLTrackElement's src attribute and load
-  // HTMLTrackElement's WebVTTLoadListener by calling WebVTTLoadListener's
+  // HTMLTrackElement's WebVTTListener by calling WebVTTListener's
   // LoadResource().
   void LoadResource();
 
   friend class TextTrackCue;
-  friend class WebVTTLoadListener;
+  friend class WebVTTListener;
 
   nsRefPtr<TextTrack> mTrack;
   nsCOMPtr<nsIChannel> mChannel;
   nsRefPtr<HTMLMediaElement> mMediaParent;
-  nsRefPtr<WebVTTLoadListener> mLoadListener;
+  nsRefPtr<WebVTTListener> mWebVTTListener;
   uint16_t mReadyState;
 
   void CreateTextTrack();

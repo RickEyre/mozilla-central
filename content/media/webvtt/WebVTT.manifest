@@ -1,0 +1,18 @@
+# nsWebVTTCue
+component {778bdcb1-1f80-4db0-a093-348083cb5af9} nsWebVTTCue.jsm
+contract @mozilla.org/nswebvttcue;1 {778bdcb1-1f80-4db0-a093-348083cb5af9}
+
+# nsWebVTTParser
+component {71bf19e5-4f03-4807-abb8-3a646b530e60} nsWebVTTParser.jsm
+contract @mozilla.org/nswebvttparser;1 {71bf19e5-4f03-4807-abb8-3a646b530e60}
+
+# nsWebVTTParserService
+component {04de1967-5f50-422e-b7d8-7f6cef70e148} nsWebVTTParserService.jsm
+contract @mozilla.org/nswebvttparserservice;1 {04de1967-5f50-422e-b7d8-7f6cef70e148}
+
+# nsWebVTTRegion
+component {140a1aa2-35cd-441c-867d-70766a2b7009} nsWebVTTRegion.jsm
+contract @mozilla.org/nswebvttregion;1 {140a1aa2-35cd-441c-867d-70766a2b7009}
+
+# vtt.js code
+content webvtt ./

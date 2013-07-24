@@ -1,0 +1,34 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsISupports.idl"
+#include "nsIWebVTTCue.idl"
+#include "nsIWebVTTParser.idl"
+#include "nsIWebVTTListener.idl"
+#include "nsIDOMWindow.idl"
+#include "nsIDOMDocumentFragment.idl"
+
+/**
+ * Service for creating WebVTTParser's and converting WebVTT text content to
+ * document fragments.
+ */
+[scriptable, uuid(b8ed9f5a-1eb9-4ef0-b994-ccb3366cbe6d)]
+interface nsIWebVTTParserService : nsISupports
+{
+  /**
+   * Create a new WebVTTParser to parse WebVTT streams.
+   */
+  nsIWebVTTParser newParser(in nsIWebVTTListener callback);
+
+  /**
+   * Convert the text content of a WebVTT cue to a document fragment so that
+   * we can display it on the page.
+   */
+  nsIDOMDocumentFragment convertCueToDOMTree(in nsIDOMWindow window,
+                                             in wstring cuetext);
+};
+
+%{C++
+#define NS_WEBVTTPARSERSERVICE_CONTRACTID "@mozilla.org/nswebvttparserservice;1"
+%}

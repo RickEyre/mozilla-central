@@ -1,0 +1,24 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsISupports.idl"
+
+/**
+ * Represents the data of a parsed WebVTT Cue.
+ */
+[scriptable, uuid(24590500-09fd-4d60-88be-86b6f750b793)]
+interface nsIWebVTTCue : nsISupports
+{
+  readonly attribute AString                id;
+  readonly attribute double                 startTime;
+  readonly attribute double                 endTime;
+  readonly attribute AString                regionID;
+  readonly attribute AString                vertical;
+  readonly attribute boolean                snapToLines;
+  readonly attribute long                   line;
+  readonly attribute long                   position;
+  readonly attribute long                   size;
+  readonly attribute AString                align;
+  readonly attribute AString                text;
+};

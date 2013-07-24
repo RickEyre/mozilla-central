@@ -1,0 +1,56 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#ifndef mozilla_dom_WebVTTLoadListener_h
+#define mozilla_dom_WebVTTLoadListener_h
+
+#include "nsIWebVTTListener.h"
+#include "nsIStreamListener.h"
+#include "nsIChannelEventSink.h"
+#include "nsIInterfaceRequestor.h"
+#include "nsIObserver.h"
+#include "nsCycleCollectionParticipant.h"
+#include "mozilla/dom/HTMLTrackElement.h"
+#include "nsIWebVTTParser.h"
+#include "nsIWebVTTParserService.h"
+
+namespace mozilla {
+namespace dom {
+
+class WebVTTListener MOZ_FINAL : public nsIWebVTTListener,
+                                 public nsIStreamListener,
+                                 public nsIChannelEventSink,
+                                 public nsIInterfaceRequestor
+{
+  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_NSIWEBVTTLISTENER
+  NS_DECL_NSIREQUESTOBSERVER
+  NS_DECL_NSISTREAMLISTENER
+  NS_DECL_NSICHANNELEVENTSINK
+  NS_DECL_NSIINTERFACEREQUESTOR
+
+  NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(WebVTTListener,
+                                           nsIStreamListener)
+
+public:
+  WebVTTListener(HTMLTrackElement* aElement);
+  ~WebVTTListener();
+
+  nsresult LoadResource();
+
+private:
+  static NS_METHOD ParseChunk(nsIInputStream* aInStream, void* aClosure,
+                              const char* aFromSegment, uint32_t aToOffset,
+                              uint32_t aCount, uint32_t* aWriteCount);
+
+  nsCOMPtr<nsIWebVTTParserService> mWebVTTService;
+  nsRefPtr<HTMLTrackElement> mElement;
+  nsRefPtr<nsIWebVTTParser> mParser;
+};
+
+} // namespace dom
+} // namespace mozilla
+
+#endif // mozilla_dom_WebVTTListener_h
