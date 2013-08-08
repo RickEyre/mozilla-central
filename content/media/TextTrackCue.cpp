@@ -5,9 +5,7 @@
 
 #include "mozilla/dom/HTMLTrackElement.h"
 #include "mozilla/dom/TextTrackCue.h"
-#include "mozilla/dom/ProcessingInstruction.h"
 #include "nsIFrame.h"
-#include "nsTextNode.h"
 #include "nsVideoFrame.h"
 
 // Alternate value for the 'auto' keyword.
@@ -49,7 +47,6 @@ TextTrackCue::TextTrackCue(nsISupports* aGlobal,
   : mText(aText)
   , mStartTime(aStartTime)
   , mEndTime(aEndTime)
-  , mHead(nullptr)
   , mReset(false)
 {
   SetDefaultCueSettings();
@@ -65,28 +62,18 @@ TextTrackCue::TextTrackCue(nsISupports* aGlobal,
                            double aEndTime,
                            const nsAString& aText,
                            HTMLTrackElement* aTrackElement,
-                           webvtt_node* head,
                            ErrorResult& aRv)
   : mText(aText)
   , mStartTime(aStartTime)
   , mEndTime(aEndTime)
   , mTrackElement(aTrackElement)
-  , mHead(head)
   , mReset(false)
 {
-  // Ref mHead here.
   SetDefaultCueSettings();
   MOZ_ASSERT(aGlobal);
   SetIsDOMBinding();
   if (NS_FAILED(StashDocument(aGlobal))) {
     aRv.Throw(NS_ERROR_DOM_INVALID_STATE_ERR);
-  }
-}
-
-TextTrackCue::~TextTrackCue()
-{
-  if (mHead) {
-    // Release mHead here.
   }
 }
 
@@ -163,50 +150,8 @@ TextTrackCue::GetCueAsHTML()
 {
   MOZ_ASSERT(mDocument);
   nsRefPtr<DocumentFragment> frag = mDocument->CreateDocumentFragment();
-  ConvertNodeTreeToDOMTree(frag);
 
   return frag.forget();
-}
-
-struct WebVTTNodeParentPair
-{
-  webvtt_node* mNode;
-  nsIContent* mParent;
-
-  WebVTTNodeParentPair(webvtt_node* aNode, nsIContent* aParent)
-    : mNode(aNode)
-    , mParent(aParent)
-  {}
-};
-
-void
-TextTrackCue::ConvertNodeTreeToDOMTree(nsIContent* aParentContent)
-{
-  nsTArray<WebVTTNodeParentPair> nodeParentPairStack;
-
-  // mHead should actually be the head of a node tree.
-  // Seed the stack for traversal.
-}
-
-already_AddRefed<nsIContent>
-TextTrackCue::ConvertInternalNodeToContent(const webvtt_node* aWebVTTNode)
-{
-  nsIAtom* atom = nsGkAtoms::span;
-
-  nsCOMPtr<nsIContent> cueTextContent;
-  mDocument->CreateElem(nsDependentAtomString(atom), nullptr,
-                        kNameSpaceID_XHTML,
-                        getter_AddRefs(cueTextContent));
-  return cueTextContent.forget();
-}
-
-already_AddRefed<nsIContent>
-TextTrackCue::ConvertLeafNodeToContent(const webvtt_node* aWebVTTNode)
-{
-  nsCOMPtr<nsIContent> cueTextContent;
-  // Use mDocument to create nodes on cueTextContent.
-
-  return cueTextContent.forget();
 }
 
 JSObject*
