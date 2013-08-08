@@ -333,6 +333,8 @@
 @BINPATH@/components/amContentHandler.js
 @BINPATH@/components/amWebInstallListener.js
 @BINPATH@/components/nsBlocklistService.js
+@BINPATH@/components/WebVTT.manifest
+@BINPATH@/components/WebVTTParserWrapper.js
 
 #ifdef MOZ_UPDATER
 @BINPATH@/components/nsUpdateService.manifest
