@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "WebVTTLoadListener.h"
-#include "mozilla/dom/TextTrackCue.h"
+#include "mozilla/dom/VTTCue.h"
 #include "nsIAsyncVerifyRedirectCallback.h"
 #include "VideoUtils.h"
 

@@ -138,7 +138,7 @@ protected:
   // LoadResource().
   void LoadResource();
 
-  friend class TextTrackCue;
+  friend VTTCue;
   friend class WebVTTLoadListener;
 
   nsRefPtr<TextTrack> mTrack;

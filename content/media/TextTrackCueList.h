@@ -7,15 +7,13 @@
 #ifndef mozilla_dom_TextTrackCueList_h
 #define mozilla_dom_TextTrackCueList_h
 
-#include "mozilla/dom/TextTrackCue.h"
+#include "mozilla/dom/VTTCue.h"
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsWrapperCache.h"
 
 namespace mozilla {
 namespace dom {
-
-class TextTrackCue;
 
 class TextTrackCueList MOZ_FINAL : public nsISupports
                                  , public nsWrapperCache

@@ -8,7 +8,7 @@
 #define mozilla_dom_TextTrack_h
 
 #include "mozilla/dom/TextTrackBinding.h"
-#include "mozilla/dom/TextTrackCue.h"
+#include "mozilla/dom/VTTCue.h"
 #include "mozilla/dom/TextTrackCueList.h"
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
@@ -19,7 +19,6 @@
 namespace mozilla {
 namespace dom {
 
-class TextTrackCue;
 class TextTrackCueList;
 
 class TextTrack MOZ_FINAL : public nsDOMEventTargetHelper

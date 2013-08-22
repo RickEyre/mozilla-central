@@ -358,7 +358,7 @@ webidl_files = \
   TextDecoder.webidl \
   TextEncoder.webidl \
   TextTrack.webidl \
-  TextTrackCue.webidl \
+  VTTCue.webidl \
   TextTrackCueList.webidl \
   TextTrackList.webidl \
   TimeEvent.webidl \

@@ -5,13 +5,15 @@
  *
  * The origin of this IDL file is
  * http://www.whatwg.org/specs/web-apps/current-work/#texttrackcue
+ * And
+ * http://dev.w3.org/html5/webvtt/#vttcue-interface
  */
 
 enum AutoKeyword { "auto" };
 
 /* Non-spec: Request to add this enum to spec
  * can be found here: https://www.w3.org/Bugs/Public/show_bug.cgi?id=20996 */
-enum TextTrackCueAlign {
+enum VTTCueAlign {
   "start",
   "middle",
   "end",
@@ -19,9 +21,11 @@ enum TextTrackCueAlign {
   "right"
 };
 
+typedef VTTCue TextTrackCue;
+
 [Constructor(double startTime, double endTime, DOMString text),
  Pref="media.webvtt.enabled"]
-interface TextTrackCue : EventTarget {
+interface VTTCue : EventTarget {
   readonly attribute TextTrack? track;
 
   attribute DOMString id;
@@ -37,7 +41,7 @@ interface TextTrackCue : EventTarget {
   attribute long position;
   [SetterThrows]
   attribute long size;
-  attribute TextTrackCueAlign align;
+  attribute VTTCueAlign align;
   attribute DOMString text;
   DocumentFragment getCueAsHTML();
 

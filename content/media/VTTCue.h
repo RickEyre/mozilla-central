@@ -4,12 +4,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_dom_TextTrackCue_h
-#define mozilla_dom_TextTrackCue_h
+#ifndef mozilla_dom_VTTCue_h
+#define mozilla_dom_VTTCue_h
 
 #include "mozilla/dom/DocumentFragment.h"
-#include "mozilla/dom/TextTrack.h"
-#include "mozilla/dom/TextTrackCueBinding.h"
+#include "mozilla/dom/VTTCueBinding.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsDOMEventTargetHelper.h"
 #include "nsIDocument.h"
@@ -22,34 +21,36 @@ namespace dom {
 class HTMLTrackElement;
 class TextTrack;
 
-class TextTrackCue MOZ_FINAL : public nsDOMEventTargetHelper
+typedef VTTCue TextTrackCue;
+
+class VTTCue MOZ_FINAL : public nsDOMEventTargetHelper
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(TextTrackCue,
+  NS_DECL_CYCLE_COLLECTION_SCRIPT_HOLDER_CLASS_INHERITED(VTTCue,
                                                          nsDOMEventTargetHelper)
 
-  // TextTrackCue WebIDL
+  // VTTCue WebIDL
   // See bug 868509 about splitting out the WebVTT-specific interfaces.
-  static already_AddRefed<TextTrackCue>
+  static already_AddRefed<VTTCue>
   Constructor(GlobalObject& aGlobal,
               double aStartTime,
               double aEndTime,
               const nsAString& aText,
               ErrorResult& aRv)
   {
-    nsRefPtr<TextTrackCue> ttcue = new TextTrackCue(aGlobal.Get(), aStartTime,
+    nsRefPtr<VTTCue> ttcue = new VTTCue(aGlobal.Get(), aStartTime,
                                                     aEndTime, aText, aRv);
     return ttcue.forget();
   }
-  TextTrackCue(nsISupports* aGlobal, double aStartTime, double aEndTime,
+  VTTCue(nsISupports* aGlobal, double aStartTime, double aEndTime,
                const nsAString& aText, ErrorResult& aRv);
 
-  TextTrackCue(nsISupports* aGlobal, double aStartTime, double aEndTime,
+  VTTCue(nsISupports* aGlobal, double aStartTime, double aEndTime,
                const nsAString& aText, HTMLTrackElement* aTrackElement,
                webvtt_node* head, ErrorResult& aRv);
 
-  ~TextTrackCue();
+  ~VTTCue();
 
   virtual JSObject* WrapObject(JSContext* aCx,
                                JS::Handle<JSObject*> aScope) MOZ_OVERRIDE;
@@ -210,12 +211,12 @@ public:
     CueChanged();
   }
 
-  TextTrackCueAlign Align() const
+  VTTCueAlign Align() const
   {
     return mAlign;
   }
 
-  void SetAlign(TextTrackCueAlign& aAlign)
+  void SetAlign(VTTCueAlign& aAlign)
   {
     if (mAlign == aAlign)
       return;
@@ -251,7 +252,7 @@ public:
 
   // Helper functions for implementation.
   bool
-  operator==(const TextTrackCue& rhs) const
+  operator==(const VTTCue& rhs) const
   {
     return mId.Equals(rhs.mId);
   }
@@ -286,7 +287,7 @@ public:
    */
 
   /**
-   * Converts the TextTrackCue's cuetext into a tree of DOM objects and attaches
+   * Converts the VTTCue's cuetext into a tree of DOM objects and attaches
    * it to a div on it's owning TrackElement's MediaElement's caption overlay.
    */
   void RenderCue();
@@ -347,13 +348,13 @@ private:
   bool mSnapToLines;
   nsString mVertical;
   int mLine;
-  TextTrackCueAlign mAlign;
+  VTTCueAlign mAlign;
 
   // Holds the computed DOM elements that represent the parsed cue text.
   // http://www.whatwg.org/specs/web-apps/current-work/#text-track-cue-display-state
   nsCOMPtr<nsIContent> mDisplayState;
   // Tells whether or not we need to recompute mDisplayState. This is set
-  // anytime a property that relates to the display of the TextTrackCue is
+  // anytime a property that relates to the display of the VTTCue is
   // changed.
   bool mReset;
 };
@@ -361,4 +362,4 @@ private:
 } // namespace dom
 } // namespace mozilla
 
-#endif // mozilla_dom_TextTrackCue_h
+#endif // mozilla_dom_VTTCue_h
