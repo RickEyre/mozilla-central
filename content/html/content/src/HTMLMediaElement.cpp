@@ -422,7 +422,7 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(HTMLMediaElement, nsGenericHTM
     NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mOutputStreams[i].mStream);
   }
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPlayed);
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mTextTracks);
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mTextTrackManager)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(HTMLMediaElement, nsGenericHTMLElement)
@@ -442,7 +442,7 @@ NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(HTMLMediaElement, nsGenericHTMLE
     NS_IMPL_CYCLE_COLLECTION_UNLINK(mOutputStreams[i].mStream);
   }
   NS_IMPL_CYCLE_COLLECTION_UNLINK(mPlayed);
-  NS_IMPL_CYCLE_COLLECTION_UNLINK(mTextTracks);
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mTextTrackManager)
 NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(HTMLMediaElement)
@@ -1970,7 +1970,7 @@ HTMLMediaElement::HTMLMediaElement(already_AddRefed<nsINodeInfo> aNodeInfo)
   RegisterFreezableElement();
   NotifyOwnerDocumentActivityChanged();
 
-  mTextTracks = new TextTrackList(OwnerDoc()->GetParentObject());
+  mTextTrackManager = new TextTrackManager(this);
 }
 
 HTMLMediaElement::~HTMLMediaElement()
@@ -2938,7 +2938,9 @@ void HTMLMediaElement::SeekCompleted()
   DispatchAsyncEvent(NS_LITERAL_STRING("seeked"));
   // We changed whether we're seeking so we need to AddRemoveSelfReference
   AddRemoveSelfReference();
-  mTextTracks->DidSeek();
+  if (mTextTrackManager) {
+    mTextTrackManager->DidSeek();
+  }
 }
 
 void HTMLMediaElement::NotifySuspendedByCache(bool aIsSuspended)
@@ -3622,11 +3624,11 @@ void HTMLMediaElement::FireTimeUpdate(bool aPeriodic)
   }
 
   // Update visible text tracks.
-  // Here mTextTracks can be null if the cycle collector has unlinked
+  // Here mTextTrackManager can be null if the cycle collector has unlinked
   // us before our parent. In that case UnbindFromTree will call us
   // when our parent is unlinked.
-  if (mTextTracks) {
-    mTextTracks->Update(time);
+  if (mTextTrackManager) {
+    mTextTrackManager->Update(time);
   }
 }
 
@@ -3859,7 +3861,7 @@ NS_IMETHODIMP HTMLMediaElement::CanPlayChanged(int32_t canPlay)
 TextTrackList*
 HTMLMediaElement::TextTracks() const
 {
-  return mTextTracks;
+  return mTextTrackManager ? mTextTrackManager->TextTracks() : nullptr;
 }
 
 already_AddRefed<TextTrack>
@@ -3867,7 +3869,9 @@ HTMLMediaElement::AddTextTrack(TextTrackKind aKind,
                                const nsAString& aLabel,
                                const nsAString& aLanguage)
 {
-  return mTextTracks->AddTextTrack(this, aKind, aLabel, aLanguage);
+  return mTextTrackManager ? mTextTrackManager->AddTextTrack(aKind, aLabel,
+                                                             aLanguage)
+                           : nullptr;
 }
 
 } // namespace dom
