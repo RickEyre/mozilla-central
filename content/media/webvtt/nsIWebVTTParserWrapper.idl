@@ -61,6 +61,25 @@ interface nsIWebVTTParserWrapper : nsISupports
    */
   nsIDOMHTMLElement convertCueToDOMTree(in nsIDOMWindow window,
                                         in nsISupports cue);
+
+  /**
+   * Compute the display state of the VTTCues in cues along with any VTTRegions
+   * that they might be in. First, it computes the positioning and styling of
+   * the cues and regions passed and converts them into a DOM tree rooted at
+   * a containing HTMLDivElement. It then adjusts those computed divs for
+   * overlap avoidance using the dimensions of 'overlay'. Finally, it adds the
+   * computed divs to the VTTCues display state property for use later.
+   *
+   * @param window  A window object with which it will create the DOM tree
+   *                and containing div element.
+   * @param cues    An array of VTTCues who need there display state to be
+   *                computed.
+   * @param regions An array of VTTRegions that one or more VTTCue in cues is
+   *                is contained within.
+   * @param overlay The HTMLElement that the cues will be displayed within.
+   */
+  void processCues(in nsIDOMWindow window, in jsval cues, in jsval regions,
+                   in nsISupports overlay);
 };
 
 %{C++
