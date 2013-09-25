@@ -131,11 +131,11 @@ TextTrack::RemoveRegion(const TextTrackRegion& aRegion, ErrorResult& aRv)
   mRegionList->RemoveTextTrackRegion(aRegion);
 }
 
-TextTrackCueList*
-TextTrack::GetActiveCues()
+void
+TextTrack::UpdateActiveCueList()
 {
   if (mMode == TextTrackMode::Disabled || !mMediaElement) {
-    return nullptr;
+    return;
   }
 
   // If we are dirty, i.e. an event happened that may cause the sorted mCueList
@@ -164,7 +164,20 @@ TextTrack::GetActiveCues()
          (*mCueList)[mCuePos]->StartTime() <= playbackTime; mCuePos++) {
     mActiveCueList->AddCue(*(*mCueList)[mCuePos]);
   }
+}
+
+TextTrackCueList*
+TextTrack::GetActiveCues()
+{
+  UpdateActiveCueList();
   return mActiveCueList;
+}
+
+void
+TextTrack::GetActiveCueArray(nsTArray<nsRefPtr<TextTrackCue> >& aCues)
+{
+  UpdateActiveCueList();
+  mActiveCueList->GetArray(aCues);
 }
 
 } // namespace dom

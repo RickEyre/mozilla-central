@@ -83,6 +83,7 @@ public:
   }
 
   TextTrackCueList* GetActiveCues();
+  void GetActiveCueArray(nsTArray<nsRefPtr<TextTrackCue> >& aCues);
 
   TextTrackRegionList* GetRegions() const
   {
@@ -106,6 +107,8 @@ public:
   IMPL_EVENT_HANDLER(cuechange)
 
 private:
+  void UpdateActiveCueList();
+
   nsCOMPtr<nsISupports> mParent;
   nsRefPtr<HTMLMediaElement> mMediaElement;
 
