@@ -73,9 +73,9 @@ TextTrackList::GetTrackById(const nsAString& aId)
 }
 
 void
-TextTrackList::RemoveTextTrack(const TextTrack& aTrack)
+TextTrackList::RemoveTextTrack(TextTrack* aTrack)
 {
-  mTextTracks.RemoveElement(&aTrack);
+  mTextTracks.RemoveElement(aTrack);
 }
 
 void

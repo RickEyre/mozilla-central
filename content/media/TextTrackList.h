@@ -50,7 +50,7 @@ public:
     mTextTracks.AppendElement(aTextTrack);
   }
 
-  void RemoveTextTrack(const TextTrack& aTrack);
+  void RemoveTextTrack(TextTrack* aTrack);
   void DidSeek();
 
   IMPL_EVENT_HANDLER(addtrack)
