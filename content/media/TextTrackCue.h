@@ -13,6 +13,7 @@
 #include "nsDOMEventTargetHelper.h"
 #include "nsIWebVTTParserWrapper.h"
 #include "mozilla/StaticPtr.h"
+#include "mozilla/dom/HTMLDivElement.h"
 
 namespace mozilla {
 namespace dom {
@@ -245,6 +246,16 @@ public:
     CueChanged();
   }
 
+  HTMLDivElement* DisplayState()
+  {
+    return static_cast<HTMLDivElement*>(mDisplayState.get());
+  }
+
+  void SetDisplayState(HTMLDivElement& aDisplayState)
+  {
+    mDisplayState = &aDisplayState;
+  }
+
   IMPL_EVENT_HANDLER(enter)
   IMPL_EVENT_HANDLER(exit)
 
@@ -326,7 +337,7 @@ private:
 
   // Holds the computed DOM elements that represent the parsed cue text.
   // http://www.whatwg.org/specs/web-apps/current-work/#text-track-cue-display-state
-  nsCOMPtr<nsIContent> mDisplayState;
+  nsRefPtr<nsGenericHTMLElement> mDisplayState;
   // Tells whether or not we need to recompute mDisplayState. This is set
   // anytime a property that relates to the display of the TextTrackCue is
   // changed.

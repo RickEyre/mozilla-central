@@ -101,12 +101,14 @@ TextTrackCue::StashDocument(nsISupports* aGlobal)
 void
 TextTrackCue::CreateCueOverlay()
 {
-  mDocument->CreateElem(NS_LITERAL_STRING("div"), nullptr,
-                        kNameSpaceID_XHTML,
-                        getter_AddRefs(mDisplayState));
-  nsGenericHTMLElement* cueDiv =
-    static_cast<nsGenericHTMLElement*>(mDisplayState.get());
-  cueDiv->SetClassName(NS_LITERAL_STRING("caption-text"));
+  nsCOMPtr<nsINodeInfo> nodeInfo =
+    mDocument->NodeInfoManager()->GetNodeInfo(nsGkAtoms::div,
+                                              nullptr,
+                                              kNameSpaceID_XHTML,
+                                              nsIDOMNode::ELEMENT_NODE);
+  mDisplayState = NS_NewHTMLDivElement(nodeInfo.forget());
+  NS_ENSURE_TRUE_VOID(mDisplayState);
+  mDisplayState->SetClassName(NS_LITERAL_STRING("caption-text"));
 }
 
 void
@@ -145,7 +147,8 @@ TextTrackCue::RenderCue()
   nsContentUtils::SetNodeTextContent(overlay, EmptyString(), true);
   nsContentUtils::SetNodeTextContent(mDisplayState, EmptyString(), true);
 
-  mDisplayState->AppendChild(*frag, rv);
+  nsCOMPtr<nsIDOMNode> throwAway;
+  mDisplayState->AppendChild(frag, getter_AddRefs(throwAway));
   overlay->AppendChild(*mDisplayState, rv);
 }
 
