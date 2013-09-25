@@ -70,12 +70,6 @@ TextTrack::SetDefaultSettings()
   mDirty = false;
 }
 
-void
-TextTrack::Update(double aTime)
-{
-  mCueList->Update(aTime);
-}
-
 JSObject*
 TextTrack::WrapObject(JSContext* aCx, JS::Handle<JSObject*> aScope)
 {
