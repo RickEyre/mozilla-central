@@ -50,4 +50,7 @@ interface VTTCue : EventTarget {
   attribute EventHandler onenter;
 
   attribute EventHandler onexit;
+
+  [ChromeOnly]
+  attribute HTMLDivElement displayState;
 };
