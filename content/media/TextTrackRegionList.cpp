@@ -67,5 +67,11 @@ TextTrackRegionList::RemoveTextTrackRegion(const TextTrackRegion& aRegion)
   mTextTrackRegions.RemoveElement(&aRegion);
 }
 
+void
+TextTrackRegionList::GetArray(nsTArray<nsRefPtr<TextTrackRegion> >& aRegions)
+{
+  aRegions = nsTArray<nsRefPtr<TextTrackRegion> >(mTextTrackRegions);
+}
+
 } //namespace dom
 } //namespace mozilla

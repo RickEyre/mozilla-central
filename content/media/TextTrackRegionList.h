@@ -50,6 +50,8 @@ public:
 
   void RemoveTextTrackRegion(const TextTrackRegion& aRegion);
 
+  void GetArray(nsTArray<nsRefPtr<TextTrackRegion> >& aRegions);
+
 private:
   nsCOMPtr<nsISupports> mParent;
   nsTArray<nsRefPtr<TextTrackRegion> > mTextTrackRegions;

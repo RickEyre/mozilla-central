@@ -6,6 +6,8 @@
 #include "mozilla/dom/TextTrackList.h"
 #include "mozilla/dom/TextTrackListBinding.h"
 #include "mozilla/dom/TextTrackCue.h"
+#include "mozilla/dom/TextTrackRegion.h"
+#include "mozilla/dom/TextTrackRegionList.h"
 
 namespace mozilla {
 namespace dom {
@@ -42,6 +44,18 @@ TextTrackList::GetAllActiveCues(nsTArray<nsRefPtr<TextTrackCue> >& aCues)
     if (mTextTracks[i]->Mode() != TextTrackMode::Disabled) {
       mTextTracks[i]->GetActiveCueArray(cues);
       aCues.AppendElements(cues);
+    }
+  }
+}
+
+void
+TextTrackList::GetAllRegions(nsTArray<nsRefPtr<TextTrackRegion> >& aRegions)
+{
+  nsTArray<nsRefPtr<TextTrackRegion> > regions;
+  for (uint32_t i = 0; i < Length(); i++) {
+    if (mTextTracks[i]->Mode() != TextTrackMode::Disabled) {
+      mTextTracks[i]->GetRegions()->GetArray(regions);
+      aRegions.AppendElements(regions);
     }
   }
 }
