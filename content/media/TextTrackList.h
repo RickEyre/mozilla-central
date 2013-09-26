@@ -41,6 +41,9 @@ public:
   // Get all the current active cues.
   void GetAllActiveCues(nsTArray<nsRefPtr<TextTrackCue> >& aCues);
 
+  // Get all the regions on every TextTrack.
+  void GetAllRegions(nsTArray<nsRefPtr<TextTrackRegion> >& aRegions);
+
   TextTrack* IndexedGetter(uint32_t aIndex, bool& aFound);
 
   already_AddRefed<TextTrack> AddTextTrack(HTMLMediaElement* aMediaElement,
