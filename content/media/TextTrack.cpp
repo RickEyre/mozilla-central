@@ -143,11 +143,12 @@ TextTrack::GetActiveCues()
   // the active cue list from scratch.
   if (mDirty) {
     mCuePos = 0;
-    mDirty = true;
+    mDirty = false;
     mActiveCueList->RemoveAll();
   }
 
   double playbackTime = mMediaElement->CurrentTime();
+
   // Remove all the cues from the active cue list whose end times now occur
   // earlier then the current playback time. When we reach a cue whose end time
   // is valid we can safely stop iterating as the list is sorted.
@@ -159,12 +160,9 @@ TextTrack::GetActiveCues()
   // added, that have valid start and end times for the current playback time.
   // We can stop iterating safely once we encounter a cue that does not have
   // valid times for the current playback time as the cue list is sorted.
-  for (; mCuePos < mCueList->Length(); mCuePos++) {
-    TextTrackCue* cue = (*mCueList)[mCuePos];
-    if (cue->StartTime() > playbackTime || cue->EndTime() < playbackTime) {
-      break;
-    }
-    mActiveCueList->AddCue(*cue);
+  for (; mCuePos < mCueList->Length() &&
+         (*mCueList)[mCuePos]->StartTime() <= playbackTime; mCuePos++) {
+    mActiveCueList->AddCue(*(*mCueList)[mCuePos]);
   }
   return mActiveCueList;
 }

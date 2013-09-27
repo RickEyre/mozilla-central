@@ -1,0 +1,59 @@
+<!DOCTYPE HTML>
+<html>
+<!--
+https://bugzilla.mozilla.org/show_bug.cgi?id=921484
+-->
+<head>
+  <meta charset='utf-8'>
+  <title>Regression test for Bug 921484 - TextTrack::GetActiveCues()</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"/>
+</head>
+<body>
+<p id="display"></p>
+<div id="content" style="display: none">
+</div>
+<pre id="test">
+<script class="testbody" type="text/javascript">
+SimpleTest.waitForExplicitFinish();
+SpecialPowers.pushPrefEnv({"set": [["media.webvtt.enabled", true]]},
+  function() {
+    var video = document.createElement("video");
+    video.src = "seek.webm";
+    video.preload = "auto";
+    var trackElement = document.createElement("track");
+    trackElement.src = "basic.vtt";
+    trackElement.kind = "subtitles";
+    document.getElementById("content").appendChild(video);
+    video.appendChild(trackElement);
+    video.play();
+
+    var cueInfo = [{ startTime: 0.5, endTime: 0.7, id: 1 },
+                   { startTime: 1.2, endTime: 2.4,  id: 2 },
+                   { startTime: 2.71, endTime: 2.91, id: 3 },
+                   { startTime: 3.217, endTime: 3.989, id: 4 }];
+
+    video.addEventListener("timeupdate", function() {
+      var activeCues = trackElement.track.activeCues;
+      for (var i = 0; i < cueInfo.length; i++) {
+        var cue = cueInfo[i];
+        if (cue.startTime <= video.currentTime &&
+            cue.endTime >= video.currentTime) {
+          is(activeCues.length, 1, "There should be only 1 currently active cue.");
+          is(activeCues[0].id, cue.id, "The current active cue ID should be " + cue.id);
+          return;
+        }
+      }
+      is(activeCues.length, 0, "There should be 0 active cues right now. ");
+    });
+
+    video.addEventListener("ended", function(){
+      SimpleTest.finish();
+    });
+  }
+);
+</script>
+</pre>
+</body>
+</html>
